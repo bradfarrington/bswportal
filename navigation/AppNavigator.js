@@ -1,0 +1,247 @@
+import React, { Component } from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import Brochures from "../screens/Brochures";
+import Designer from "../screens/Designer";
+import Portal from "../screens/Portal";
+import Quote from "../screens/Quote";
+import Products from "../screens/products";
+import Orders from "../screens/Portal";
+import Home from "../screens/Home";
+import Dashboard from "../screens/Dashboard";
+import GalleryScreen from "../screens/GalleryScreen";
+import GalleryAlbumScreen from "../screens/GalleryAlbumScreen";
+import {
+  FontAwesome5,
+  Foundation,
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import DisplayProducts from "../screens/DisplayProducts";
+import ProductDetails from "../screens/productDetails";
+import { Entypo } from "@expo/vector-icons";
+import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
+import MaintenanceGuides from "../screens/maintenanceGuides";
+import PdfViewerScreen from "../screens/PdfViewer";
+
+const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+const TopTabs = createMaterialTopTabNavigator();
+import { View, Platform, Text, TouchableOpacity, StyleSheet } from 'react-native';
+
+const TAB_CONFIG = [
+  { name: 'Dashboard', label: 'Home', iconFamily: 'Foundation', iconName: 'home', iconSize: 24 },
+  { name: 'Orders', label: 'Orders', iconFamily: 'FontAwesome5', iconName: 'shopping-cart', iconSize: 20 },
+  { name: 'Gallery', label: 'Gallery', iconFamily: 'MaterialIcons', iconName: 'photo-library', iconSize: 22 },
+  { name: 'Products', label: 'Products', iconFamily: 'FontAwesome5', iconName: 'box-open', iconSize: 20 },
+  { name: 'Sale', label: 'Sale', iconFamily: 'Foundation', iconName: 'burst-sale', iconSize: 26 },
+];
+
+const renderTabIcon = (tab, focused) => {
+  const color = focused ? '#fff' : '#888';
+  switch (tab.iconFamily) {
+    case 'Foundation':
+      return <Foundation name={tab.iconName} size={tab.iconSize} color={color} />;
+    case 'FontAwesome5':
+      return <FontAwesome5 name={tab.iconName} size={tab.iconSize} color={color} />;
+    case 'MaterialIcons':
+      return <MaterialIcons name={tab.iconName} size={tab.iconSize} color={color} />;
+    default:
+      return null;
+  }
+};
+
+const CustomTabBar = ({ state, descriptors, navigation }) => {
+  return (
+    <View style={tabBarStyles.container}>
+      <View style={tabBarStyles.pill}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const tab = TAB_CONFIG[index];
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              activeOpacity={0.8}
+              onPress={onPress}
+              style={[
+                tabBarStyles.tabItem,
+                isFocused ? tabBarStyles.tabItemFocused : tabBarStyles.tabItemInactive,
+              ]}
+            >
+              {renderTabIcon(tab, isFocused)}
+              {isFocused && (
+                <Text numberOfLines={1} style={tabBarStyles.label}>
+                  {tab.label}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+const tabBarStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 10,
+    left: 15,
+    right: 15,
+  },
+  pill: {
+    flexDirection: 'row',
+    backgroundColor: '#1C1C1E',
+    borderRadius: 35,
+    height: 70,
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  tabItem: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 50,
+    borderRadius: 25,
+    flex: 1,
+  },
+  tabItemFocused: {
+    flexDirection: 'row',
+    backgroundColor: 'red',
+    paddingHorizontal: 14,
+    flex: 2,
+  },
+  tabItemInactive: {
+    backgroundColor: 'transparent',
+  },
+  label: {
+    color: '#fff',
+    fontFamily: 'RM',
+    marginLeft: 6,
+    fontSize: 13,
+  },
+});
+
+const Tabs = () => {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={() => ({
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Dashboard" component={Dashboard} />
+      <Tab.Screen name="Orders" component={Orders} />
+      <Tab.Screen name="Gallery" component={GalleryScreen} />
+      <Tab.Screen name="Products" component={Products} />
+      <Tab.Screen name="Sale" component={Products} />
+    </Tab.Navigator>
+  );
+};
+
+function BrochuresTabs() {
+  return (
+    <TopTabs.Navigator
+      screenOptions={({ route }) => ({
+        tabBarActiveTintColor: "red",
+        tabBarInactiveTintColor: "grey",
+        tabBarIndicatorStyle: {
+          backgroundColor: "red",
+        },
+        tabBarLabelStyle: {
+          fontWeight: "bold",
+        },
+        tabBarStyle: {
+          backgroundColor: "#F9F9FB",
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 0,
+        },
+      })}
+    >
+      <TopTabs.Screen name="Our Products" component={Brochures} />
+      <TopTabs.Screen name="Maintenance Guides" component={MaintenanceGuides} />
+    </TopTabs.Navigator>
+  );
+}
+
+const AppNavigator = () => {
+  return (
+    <Stack.Navigator
+      initialRouteName="Home"
+      screenOptions={{
+        headerBackButtonDisplayMode: 'minimal',
+        headerTintColor: '#111',
+      }}
+    >
+      <Stack.Screen
+        name="Home"
+        component={Home}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PDfViewer"
+        component={PdfViewerScreen}
+        options={{ headerShown: true, title: "Read" }}
+      />
+      <Stack.Screen
+        name="HomeScreen"
+        component={Tabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Products"
+        component={DisplayProducts}
+        options={{
+          headerTitleStyle: {
+            fontFamily: "RB",
+          },
+        }}
+      />
+      <Stack.Screen
+        name="GalleryAlbum"
+        component={GalleryAlbumScreen}
+        options={({ route }) => ({
+          title: route.params?.title || 'Album',
+          headerBackTitle: ' ',
+          headerTintColor: '#111',
+          headerTitleStyle: {
+            fontFamily: 'RB',
+            fontSize: 17,
+          },
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerShadowVisible: false,
+        })}
+      />
+      <Stack.Screen
+        name="ProductDetails"
+        component={ProductDetails}
+        options={{
+          headerTitleStyle: {
+            fontFamily: "RB",
+          },
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+export default AppNavigator;

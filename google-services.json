@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "968301915029",
+    "project_id": "bswportalv2",
+    "storage_bucket": "bswportalv2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:968301915029:android:247e15e0716b6ef8fda49c",
+        "android_client_info": {
+          "package_name": "com.BSWCustomerPortal.bradtech"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "968301915029-t50al63i4n5apneardj8g8ho9mnmhsvl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGqQocgO6ObATAjWv-tLPCK8LfvWP6Cyc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "968301915029-t50al63i4n5apneardj8g8ho9mnmhsvl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
