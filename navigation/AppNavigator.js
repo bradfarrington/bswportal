@@ -22,6 +22,9 @@ import ProductDetails from "../screens/productDetails";
 import { Entypo } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import MaintenanceGuides from "../screens/maintenanceGuides";
+import CatalogCategoriesScreen from "../screens/CatalogCategoriesScreen";
+import CatalogSubCategoriesScreen from "../screens/CatalogSubCategoriesScreen";
+import CatalogProductDetailsScreen from "../screens/CatalogProductDetailsScreen";
 import PdfViewerScreen from "../screens/PdfViewer";
 
 const Tab = createBottomTabNavigator();
@@ -149,7 +152,7 @@ const Tabs = () => {
       <Tab.Screen name="Dashboard" component={Dashboard} />
       <Tab.Screen name="Orders" component={Orders} />
       <Tab.Screen name="Gallery" component={GalleryScreen} />
-      <Tab.Screen name="Products" component={Products} />
+      <Tab.Screen name="Products" component={CatalogCategoriesScreen} />
       <Tab.Screen name="Sale" component={Products} />
     </Tab.Navigator>
   );
@@ -239,6 +242,36 @@ const AppNavigator = () => {
             fontFamily: "RB",
           },
         }}
+      />
+      <Stack.Screen
+        name="CatalogCategories"
+        component={CatalogCategoriesScreen}
+        options={{
+          title: "Our Products",
+          headerTitleStyle: { fontFamily: "RB" },
+        }}
+      />
+      <Stack.Screen
+        name="CatalogSubCategories"
+        component={CatalogSubCategoriesScreen}
+        options={({ route }) => ({
+          title: route.params?.category?.title || "Products",
+          headerBackTitle: " ",
+          headerTintColor: "#111",
+          headerTitleStyle: {
+            fontFamily: "RB",
+            fontSize: 17,
+          },
+          headerStyle: {
+            backgroundColor: "#fff",
+          },
+          headerShadowVisible: false,
+        })}
+      />
+      <Stack.Screen
+        name="CatalogProductDetails"
+        component={CatalogProductDetailsScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

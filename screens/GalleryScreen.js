@@ -11,73 +11,50 @@ import {
   RefreshControl,
   Platform,
   SafeAreaView,
+  TextInput,
 } from 'react-native';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
 
 const { width } = Dimensions.get('window');
 const GRID_PADDING = 12;
 const GAP = 8;
 
-// Bento tile sizing helpers
-const fullWidth = width - GRID_PADDING * 2;
-const halfWidth = (fullWidth - GAP) / 2;
-const thirdWidth = (fullWidth - GAP * 2) / 3;
-
-// Bento pattern: repeating group of 5 albums
-// Row 1: one large (2/3) + one small (1/3)  — tall
-// Row 2: one small (1/3) + one large (2/3)  — shorter
-// Row 3: full width banner
-const getBentoLayout = (index) => {
-  const pos = index % 5;
-  switch (pos) {
-    case 0: // Large left
-      return { w: halfWidth + thirdWidth / 2, h: 220 };
-    case 1: // Small right
-      return { w: halfWidth - thirdWidth / 2, h: 220 };
-    case 2: // Small left
-      return { w: halfWidth - thirdWidth / 2, h: 180 };
-    case 3: // Large right
-      return { w: halfWidth + thirdWidth / 2, h: 180 };
-    case 4: // Full width
-      return { w: fullWidth, h: 160 };
-    default:
-      return { w: halfWidth, h: 200 };
+const getCoverAspectRatio = (album) => {
+  const extras = album.primary_photo_extras;
+  let ratio = 1;
+  if (extras) {
+    if (extras.width_c && extras.height_c) ratio = parseInt(extras.width_c, 10) / parseInt(extras.height_c, 10);
+    else if (extras.width_z && extras.height_z) ratio = parseInt(extras.width_z, 10) / parseInt(extras.height_z, 10);
+    else if (extras.width_m && extras.height_m) ratio = parseInt(extras.width_m, 10) / parseInt(extras.height_m, 10);
   }
+  // Clamp ratio to avoid extremely stretched or compressed tiles
+  return Math.max(0.65, Math.min(ratio, 1.8));
 };
 
-// Group albums into bento rows
-const buildBentoRows = (albums) => {
-  const rows = [];
-  let i = 0;
-  while (i < albums.length) {
-    const pos = i % 5;
-    if (pos === 0 && i + 1 < albums.length) {
-      // Row of 2: large + small
-      rows.push([
-        { album: albums[i], layout: getBentoLayout(i) },
-        { album: albums[i + 1], layout: getBentoLayout(i + 1) },
-      ]);
-      i += 2;
-    } else if (pos === 2 && i + 1 < albums.length) {
-      // Row of 2: small + large
-      rows.push([
-        { album: albums[i], layout: getBentoLayout(i) },
-        { album: albums[i + 1], layout: getBentoLayout(i + 1) },
-      ]);
-      i += 2;
-    } else if (pos === 4) {
-      // Full width row
-      rows.push([{ album: albums[i], layout: getBentoLayout(i) }]);
-      i += 1;
+// Build 2-column masonry layout
+const buildMasonryColumns = (albums) => {
+  const leftCol = [];
+  const rightCol = [];
+  let leftHeight = 0;
+  let rightHeight = 0;
+
+  albums.forEach((album) => {
+    const ratio = getCoverAspectRatio(album);
+    const estimatedHeight = 1 / ratio;
+
+    if (leftHeight <= rightHeight) {
+      leftCol.push({ album, ratio });
+      leftHeight += estimatedHeight;
     } else {
-      // Fallback: single item as half width
-      rows.push([{ album: albums[i], layout: { w: fullWidth, h: 180 } }]);
-      i += 1;
+      rightCol.push({ album, ratio });
+      rightHeight += estimatedHeight;
     }
-  }
-  return rows;
+  });
+
+  return { leftCol, rightCol };
 };
 
 const GalleryScreen = ({ navigation }) => {
@@ -85,6 +62,8 @@ const GalleryScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
   const fetchAlbums = useCallback(async () => {
     try {
@@ -130,10 +109,10 @@ const GalleryScreen = ({ navigation }) => {
     return `https://live.staticflickr.com/${album.server}/${album.primary}_${album.secret}_z.jpg`;
   };
 
-  const renderAlbumTile = (album, layout) => (
+  const renderAlbumTile = (album, ratio) => (
     <TouchableOpacity
       key={album.id}
-      style={[styles.albumCard, { width: layout.w, height: layout.h }]}
+      style={[styles.albumCard, { aspectRatio: ratio }]}
       activeOpacity={0.9}
       onPress={() =>
         navigation.navigate('GalleryAlbum', {
@@ -147,9 +126,13 @@ const GalleryScreen = ({ navigation }) => {
         style={styles.coverImage}
         resizeMode="cover"
       />
-      <View style={styles.cardOverlay} />
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.85)']}
+        locations={[0.3, 1]}
+        style={styles.cardOverlay}
+      />
       <View style={styles.cardContent}>
-        <Text style={[styles.albumTitle, layout.w < halfWidth && styles.albumTitleSmall]}>
+        <Text style={styles.albumTitle} numberOfLines={2}>
           {album.title._content}
         </Text>
         <View style={styles.countBadge}>
@@ -181,13 +164,33 @@ const GalleryScreen = ({ navigation }) => {
     );
   }
 
-  const bentoRows = buildBentoRows(albums);
+  const filteredAlbums = albums.filter((album) =>
+    album.title._content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const { leftCol, rightCol } = buildMasonryColumns(filteredAlbums);
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Gallery</Text>
+        <View style={[styles.searchContainer, isFocused && styles.searchContainerFocused]}>
+          <Ionicons name="search" size={22} color={isFocused ? '#e5040a' : '#888'} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Find an album..."
+            placeholderTextColor="#A0AEC0"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            selectionColor="#e5040a"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="#ccc" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -202,11 +205,14 @@ const GalleryScreen = ({ navigation }) => {
             />
           }
         >
-          {bentoRows.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.bentoRow}>
-              {row.map(({ album, layout }) => renderAlbumTile(album, layout))}
+          <View style={styles.masonryContainer}>
+            <View style={styles.masonryColumn}>
+              {leftCol.map(({ album, ratio }) => renderAlbumTile(album, ratio))}
             </View>
-          ))}
+            <View style={styles.masonryColumn}>
+              {rightCol.map(({ album, ratio }) => renderAlbumTile(album, ratio))}
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -218,24 +224,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 20 : 10,
-    paddingBottom: 10,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginHorizontal: GRID_PADDING,
+    marginTop: Platform.OS === 'android' ? 20 : 10,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: 'RB',
+  searchContainerFocused: {
+    borderColor: 'rgba(229, 4, 10, 0.3)',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 8 },
+    backgroundColor: '#fff',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'RM',
     color: '#111',
+    marginLeft: 10,
+    marginBottom: -2, // Optical alignment for custom fonts
+  },
+  searchIcon: {
+    marginRight: 0,
+  },
+  clearButton: {
+    padding: 2,
+    marginLeft: 8,
   },
   scrollContent: {
     paddingHorizontal: GRID_PADDING,
     paddingBottom: 110,
   },
-  bentoRow: {
+  masonryContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: GAP,
+    gap: GAP,
+  },
+  masonryColumn: {
+    flex: 1,
+    gap: GAP,
   },
   albumCard: {
     borderRadius: 18,
@@ -254,7 +292,6 @@ const styles = StyleSheet.create({
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
   },
   cardContent: {
     position: 'absolute',
@@ -264,13 +301,13 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   albumTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'RB',
     color: '#fff',
     marginBottom: 4,
-  },
-  albumTitleSmall: {
-    fontSize: 13,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   countBadge: {
     flexDirection: 'row',
@@ -279,8 +316,11 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 12,
     fontFamily: 'RM',
-    color: 'rgba(255,255,255,0.85)',
+    color: 'rgba(255,255,255,0.9)',
     marginLeft: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   centered: {
     flex: 1,
