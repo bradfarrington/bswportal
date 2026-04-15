@@ -1,8 +1,8 @@
 import * as ImageManipulator from "expo-image-manipulator";
 
 // Production Supabase Edge Function URL
-const BACKEND_URL = "https://kmrfnaurkbmkkoumfnxp.supabase.co/functions/v1/generate-image";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcmZuYXVya2Jta2tvdW1mbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNjY4NTAsImV4cCI6MjA5MTg0Mjg1MH0.V64OETndBlnMMn7ymtv2M3e5GmX3ROk1FwbIaC1_N1k";
+const BACKEND_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-image`;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Compresses and resizes the image before sending to save bandwidth and memory.
