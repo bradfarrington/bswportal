@@ -30,10 +30,10 @@ import PdfViewerScreen from "../screens/PdfViewer";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const TopTabs = createMaterialTopTabNavigator();
-import { View, Platform, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Platform, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 const TAB_CONFIG = [
-  { name: 'Dashboard', label: 'Home', iconFamily: 'Foundation', iconName: 'home', iconSize: 24 },
+  { name: 'Dashboard', label: 'Home', isCustomIcon: true, iconSource: require('../assets/tabicon.png'), iconSize: 24 },
   { name: 'Orders', label: 'Orders', iconFamily: 'FontAwesome5', iconName: 'shopping-cart', iconSize: 20 },
   { name: 'Gallery', label: 'Gallery', iconFamily: 'MaterialIcons', iconName: 'photo-library', iconSize: 22 },
   { name: 'Products', label: 'Products', iconFamily: 'FontAwesome5', iconName: 'box-open', iconSize: 20 },
@@ -42,6 +42,14 @@ const TAB_CONFIG = [
 
 const renderTabIcon = (tab, focused) => {
   const color = focused ? '#fff' : '#888';
+  if (tab.isCustomIcon) {
+    return (
+      <Image
+        source={tab.iconSource}
+        style={{ width: tab.iconSize, height: tab.iconSize, tintColor: color, resizeMode: 'contain' }}
+      />
+    );
+  }
   switch (tab.iconFamily) {
     case 'Foundation':
       return <Foundation name={tab.iconName} size={tab.iconSize} color={color} />;
@@ -197,6 +205,11 @@ const AppNavigator = () => {
         name="Home"
         component={Home}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Designer"
+        component={Designer}
+        options={{ headerShown: true, title: "Door Designer", headerTitleStyle: { fontFamily: "RB" } }}
       />
       <Stack.Screen
         name="PDfViewer"

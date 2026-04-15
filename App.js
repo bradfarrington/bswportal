@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import AppNavigator from "./navigation/AppNavigator";
 import { useFonts } from "expo-font";
+import { Montserrat_800ExtraBold, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { registerForPushNotificationsAsync } from "./components/pushNotifications";
@@ -21,6 +23,13 @@ export default function App() {
     RB: require("./assets/fonts/Roboto-Bold.ttf"),
     RM: require("./assets/fonts/Roboto-Medium.ttf"),
     RR: require("./assets/fonts/Roboto-Regular.ttf"),
+    MontserratExtraBold: Montserrat_800ExtraBold,
+    MontserratBold: Montserrat_700Bold,
+    InterRegular: Inter_400Regular,
+    InterMedium: Inter_500Medium,
+    InterSemiBold: Inter_600SemiBold,
+    InterBold: Inter_700Bold,
+    InterExtraBold: Inter_800ExtraBold,
   });
   const notificationListener = useRef();
   const responseListener = useRef();
@@ -60,7 +69,7 @@ export default function App() {
     return null;
   }
   return (
-    <SafeAreaView style={{flex:1}}>
+    <SafeAreaView style={{flex:1, backgroundColor:'#F9FAFB'}}>
     <NavigationContainer>
       <AppNavigator />
       <StatusBar style="auto" />

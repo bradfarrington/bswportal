@@ -12,11 +12,12 @@ export default function CatalogCategoriesScreen({ navigation }) {
     } else {
       navigation.navigate('CatalogProductDetails', { 
         product: {
-          id: category.id,
-          title: category.title,
-          heroImage: category.image,
-          tagline: "Explore our range.",
-          about: "Details coming soon.",
+          ...category,
+          id: category.id || 'unknown',
+          title: category.title || 'Product',
+          heroImage: category.heroImage || category.image,
+          tagline: category.tagline || "Explore our range.",
+          about: category.about || "Details coming soon.",
         }
       });
     }
@@ -65,7 +66,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
             titleStyle={styles.titleVertical}
           />
           <View style={styles.bentoColumn}>
-            <BentoCard item={getItem('upvc-windows')} style={[styles.bentoSquare, { marginBottom: 16 }]} />
+            <BentoCard item={getItem('windows')} style={[styles.bentoSquare, { marginBottom: 16 }]} />
             <BentoCard item={getItem('roof-lanterns')} style={styles.bentoSquare} />
           </View>
         </View>

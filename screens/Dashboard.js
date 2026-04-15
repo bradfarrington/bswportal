@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, SafeAreaView, Platform, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { CATEGORIES } from '../data/ProductsData';
 
 const { width } = Dimensions.get('window');
 const CARD_GAP = 12;
@@ -110,57 +111,61 @@ const Dashboard = () => {
           </View>
 
           {/* Categories */}
-          <Text style={styles.sectionTitle}>Select Category</Text>
+          <Text style={styles.sectionTitle}>View Products</Text>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
             contentContainerStyle={styles.categoriesContent}
           >
-            {[
-              { name: 'Windows', id: '1' },
-              { name: 'Flush Windows', id: '2' },
-              { name: 'Doors', id: '3' },
-              { name: 'UPVC Doors', id: '4' },
-              { name: 'Composite', id: '5' },
-            ].map((cat) => (
-               <TouchableOpacity key={cat.id} style={styles.categoryItem} onPress={() => navigation.navigate('Orders')}>
+            {CATEGORIES.map((cat) => (
+               <TouchableOpacity key={cat.id} style={styles.categoryItem} onPress={() => navigation.navigate('CatalogSubCategories', { category: cat })}>
                   <View style={styles.catImageProps}>
-                    <Text style={{color: '#aaa', fontSize: 10}}>Img</Text>
+                    <Image source={cat.image} style={styles.catImage} />
                   </View>
-                  <Text style={styles.catName}>{cat.name}</Text>
+                  <Text style={styles.catName}>{cat.title}</Text>
                </TouchableOpacity>
             ))}
           </ScrollView>
 
-          {/* Near For You */}
-          <View style={[styles.sectionHeader, { marginHorizontal: 20 }]}>
-             <Text style={styles.sectionTitleNoMargin}>Near For You</Text>
-             <TouchableOpacity>
-               <Text style={styles.seeAllText}>See all</Text>
-             </TouchableOpacity>
-          </View>
-
-          {/* Near You Card */}
-          <TouchableOpacity style={styles.nearCard} onPress={() => navigation.navigate('Brochures')}>
-             <View style={styles.nearImgLayout}>
-                <Text style={{color: '#999'}}>Promotional Image</Text>
-             </View>
-             
-             <View style={styles.ratingBadge}>
-               <Ionicons name="star" size={12} color="#FF9500" />
-               <Text style={styles.ratingText}>4.9 (Review)</Text>
-             </View>
-             
-             <View style={styles.nearCardBottomOverlay}>
-               <LinearGradient
-                 colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)']}
-                 style={StyleSheet.absoluteFillObject}
-               />
-               <View style={styles.nearCardLabel}>
-                 <Text style={styles.nearCardTitle}>AC Repair</Text>
-                 <Text style={styles.nearCardSubtitle}>$30/hour</Text>
-               </View>
-             </View>
+          {/* Door Designer Promo */}
+          <TouchableOpacity 
+            style={styles.designerPromoContainer}
+            onPress={() => navigation.navigate('Designer')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.designerPromoInner}>
+              <Image
+                source={require('../assets/composite-doors/deisnger-bg-image.png')}
+                style={styles.designerPromoBackground}
+                resizeMode="cover"
+              />
+              
+              <View style={styles.designerPromoLeftContent}>
+                <Text style={styles.designerPromoTitle}>Design Your{'\n'}Dream Door</Text>
+                <Text style={styles.designerPromoDescription}>
+                  Create your perfect{'\n'}custom door in minutes.
+                </Text>
+                
+                <View style={styles.designerPromoButtonWrapper}>
+                  <View style={styles.designerPromoButtonGlow} />
+                  <LinearGradient
+                    colors={['#3A0006', '#1A0003']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.designerPromoButton}
+                  >
+                    <Text style={styles.designerPromoButtonText}>Start Designing</Text>
+                    <Feather name="chevron-right" size={16} color="#fff" style={{marginLeft: 2, marginTop: 1}} />
+                  </LinearGradient>
+                </View>
+              </View>
+            </View>
+            
+            <Image 
+              source={require('../assets/composite-doors/exploded-door.png')} 
+              style={styles.designerPromoImage} 
+              resizeMode="contain" 
+            />
           </TouchableOpacity>
 
         </ScrollView>
@@ -327,6 +332,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  catImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   catName: {
     fontSize: 13,
@@ -334,75 +345,106 @@ const styles = StyleSheet.create({
     fontFamily: 'RM',
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 15,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginTop: 35,
+    marginBottom: 5,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#9CA3AF',
-    fontFamily: 'RM',
+    color: '#e5040a',
+    fontFamily: 'RB',
+    marginTop: 6,
   },
-  nearCard: {
+  designerPromoContainer: {
     marginHorizontal: 20,
-    height: 180,
-    borderRadius: 24,
-    backgroundColor: '#E5E7EB',
-    overflow: 'hidden',
+    marginTop: 25,
+    marginBottom: 40,
     position: 'relative',
+    height: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 8,
+    zIndex: 10,
   },
-  nearImgLayout: {
+  designerPromoInner: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#fff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    borderRadius: 24,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  designerPromoBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  designerPromoLeftContent: {
+    padding: 24,
     zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    width: '60%',
+    justifyContent: 'center',
   },
-  ratingText: {
-    fontSize: 12,
-    fontFamily: 'RB',
-    color: '#111',
+  designerPromoTitle: {
+    fontFamily: 'InterBold',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#FFFFFF',
+    marginBottom: 10,
   },
-  nearCardBottomOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-    justifyContent: 'flex-end',
-    padding: 16,
-    zIndex: 2,
-  },
-  nearCardLabel: {
-    flexDirection: 'column',
-  },
-  nearCardTitle: {
-    fontSize: 16,
-    fontFamily: 'RB',
-    color: '#fff',
-  },
-  nearCardSubtitle: {
+  designerPromoDescription: {
+    fontFamily: 'InterRegular',
     fontSize: 13,
-    fontFamily: 'RM',
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
+    lineHeight: 18,
+    color: '#D4D4D8',
+    marginBottom: 18,
+  },
+  designerPromoButtonWrapper: {
+    alignSelf: 'flex-start',
+    position: 'relative',
+    marginTop: 4,
+  },
+  designerPromoButtonGlow: {
+    position: 'absolute',
+    top: -2,
+    bottom: -2,
+    left: -2,
+    right: -2,
+    backgroundColor: 'rgba(229, 4, 10, 0.8)',
+    borderRadius: 22,
+    zIndex: 1,
+    shadowColor: '#e5040a',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  designerPromoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 60, 60, 0.3)',
+  },
+  designerPromoButtonText: {
+    fontFamily: 'InterSemiBold',
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+  designerPromoImage: {
+    position: 'absolute',
+    right: -10,
+    bottom: -12,
+    width: 180,
+    height: 235,
+    zIndex: 20,
   },
 });
 

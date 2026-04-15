@@ -12,7 +12,13 @@ export default function CatalogSubCategoriesScreen({ route, navigation }) {
       <TouchableOpacity 
         style={styles.cardContainer}
         activeOpacity={0.8}
-        onPress={() => navigation.navigate('CatalogProductDetails', { product: item })}
+        onPress={() => {
+          if (item.subcategories && item.subcategories.length > 0) {
+            navigation.push('CatalogSubCategories', { category: item });
+          } else {
+            navigation.navigate('CatalogProductDetails', { product: item });
+          }
+        }}
       >
         <ImageBackground 
           source={imageSource}

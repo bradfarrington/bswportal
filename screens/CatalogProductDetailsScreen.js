@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -17,12 +17,13 @@ import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TABS = ['Overview', 'Details', 'Colours', 'Extras'];
+const TABS = ['Overview', 'Details', 'Glass', 'Colours', 'Extras'];
 
 export default function CatalogProductDetailsScreen({ route, navigation }) {
   const { product } = route.params;
   const [activeTab, setActiveTab] = useState('Overview');
   const [isExpanded, setIsExpanded] = useState(false);
+  const scrollViewRef = useRef(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedLabel, setSelectedLabel] = useState('');
   const [galleryPhotos, setGalleryPhotos] = useState([]);
@@ -88,22 +89,34 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
     fetchGallery();
   }, [product.galleryAlbumName]);
 
-  const renderTabs = () => (
-    <View style={styles.tabContainer}>
-      {TABS.map((tab) => {
-        const isActive = activeTab === tab;
-        return (
-          <TouchableOpacity 
-            key={tab} 
-            style={[styles.tabButton, isActive && styles.activeTabButton]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
+  const renderTabs = () => {
+    const availableTabs = TABS.filter(tab => {
+      if (tab === 'Extras') return product.extras && product.extras.length > 0;
+      if (tab === 'Colours') return product.colours && product.colours.length > 0;
+      if (tab === 'Glass') return product.glass && product.glass.length > 0;
+      return true;
+    });
+
+    return (
+      <View style={styles.tabContainer}>
+        {availableTabs.map((tab) => {
+          const isActive = activeTab === tab;
+          return (
+            <TouchableOpacity 
+              key={tab} 
+              style={[styles.tabButton, isActive && styles.activeTabButton]}
+              onPress={() => {
+                setActiveTab(tab);
+                scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+              }}
+            >
+              <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
 
   const renderOverview = () => (
     <View style={styles.overviewSection}>
@@ -181,7 +194,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {/* Overview image (e.g. full locking points diagram) */}
           {detail.overviewImage && (
             <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(detail.overviewImage, detail.title)}>
-              <Image source={detail.overviewImage} style={styles.overviewImage} resizeMode="contain" />
+              <Image source={detail.overviewImage} style={styles.overviewImage} resizeMode={detail.overviewImageMode || "contain"} />
             </TouchableOpacity>
           )}
           {/* Image grid (styles, security points, hardware) */}
@@ -189,11 +202,24 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
             <View style={styles.imageGrid}>
               {detail.images.map((img, i) => (
                 <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <Image source={img.image} style={styles.gridImage} resizeMode="contain" />
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                  </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+          )}
+          {/* Carousel images */}
+          {detail.carouselImages && detail.carouselImages.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
+              {detail.carouselImages.map((img, i) => (
+                <TouchableOpacity key={i} style={styles.carouselItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <Image source={img.image} style={styles.carouselImage} resizeMode="cover" />
+                  <Text style={styles.carouselLabel}>{img.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           )}
         </View>
       ))}
@@ -216,7 +242,9 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
             <View style={styles.swatchGrid}>
               {colourGroup.swatches.map((swatch, i) => (
                 <TouchableOpacity key={i} style={styles.swatchItem} activeOpacity={0.8} onPress={() => openImage(swatch.image, swatch.label)}>
-                  <Image source={swatch.image} style={styles.swatchImage} resizeMode="contain" />
+                  <View style={styles.swatchImageWrapper}>
+                    <Image source={swatch.image} style={styles.swatchImage} resizeMode="cover" />
+                  </View>
                   <Text style={styles.swatchLabel}>{swatch.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -228,6 +256,35 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No colour options available.</Text>
         </View>
+      )}
+      <View style={{ height: 100 }} />
+    </View>
+  );
+
+  const renderGlass = () => (
+    <View style={styles.detailsSection}>
+      {product.glass?.map((glassOption, index) => (
+        <View key={index} style={styles.detailCard}>
+          <Text style={styles.detailTitle}>{glassOption.title}</Text>
+          <Text style={styles.detailContent}>{glassOption.content}</Text>
+          {glassOption.images && glassOption.images.length > 0 && (
+            <View style={styles.imageGrid}>
+              {glassOption.images.map((img, i) => (
+                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                  </View>
+                  <Text style={styles.gridLabel}>{img.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      ))}
+      {(!product.glass || product.glass.length === 0) && (
+         <View style={styles.emptyState}>
+           <Text style={styles.emptyStateText}>No glass options available.</Text>
+         </View>
       )}
       <View style={{ height: 100 }} />
     </View>
@@ -263,6 +320,8 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
         return renderDetails();
       case 'Colours':
         return renderColours();
+      case 'Glass':
+        return renderGlass();
       case 'Extras':
         return renderExtras();
       default:
@@ -291,7 +350,11 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
         {renderTabs()}
 
         {/* Dynamic Content */}
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          ref={scrollViewRef}
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+        >
           {renderContent()}
         </ScrollView>
 
@@ -375,7 +438,8 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    gap: 32,
     paddingHorizontal: 20,
     marginBottom: 20,
     borderBottomWidth: 1,
@@ -602,20 +666,52 @@ const styles = StyleSheet.create({
   imageGridItem: {
     width: '46%',
     alignItems: 'center',
+    marginBottom: 12,
+  },
+  gridImageWrapper: {
+    width: '100%',
+    height: 140,
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 10,
     borderWidth: 1,
     borderColor: '#EAECF0',
+    overflow: 'hidden',
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gridImage: {
     width: '100%',
-    height: 90,
-    marginBottom: 8,
+    height: '90%',
   },
   gridLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'RM',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  // Carousel for styles
+  carouselContainer: {
+    paddingVertical: 14,
+    paddingRight: 20, // To avoid getting cut off entirely at the very end
+  },
+  carouselItem: {
+    width: 240,
+    marginRight: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EAECF0',
+    overflow: 'hidden',
+  },
+  carouselImage: {
+    width: '100%',
+    height: 160,
+  },
+  carouselLabel: {
+    padding: 12,
+    fontSize: 14,
+    fontFamily: 'RB',
     color: '#374151',
     textAlign: 'center',
   },
@@ -631,11 +727,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  swatchImageWrapper: {
+    width: '100%',
+    height: 95,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 6,
+  },
   swatchImage: {
     width: '100%',
-    height: 70,
-    borderRadius: 8,
-    marginBottom: 6,
+    height: '100%',
   },
   swatchLabel: {
     fontSize: 10,
