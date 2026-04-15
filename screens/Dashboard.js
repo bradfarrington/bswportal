@@ -168,6 +168,46 @@ const Dashboard = () => {
             />
           </TouchableOpacity>
 
+          {/* AI Visualiser Promo */}
+          <TouchableOpacity 
+            style={[styles.designerPromoContainer, { marginTop: 10, marginBottom: 40 }]}
+            onPress={() => navigation.navigate('VisualiserScreen')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.designerPromoInner}>
+              <LinearGradient
+                colors={['#1F2937', '#111827']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.designerPromoBackground}
+              />
+              
+              <View style={styles.designerPromoLeftContent}>
+                <Text style={[styles.designerPromoTitle, { fontSize: 22 }]}>AI Window{'\n'}Visualiser</Text>
+                <Text style={styles.designerPromoDescription}>
+                  Upload a photo to see{'\n'}new windows instantly.
+                </Text>
+                
+                <View style={styles.designerPromoButtonWrapper}>
+                  <View style={[styles.designerPromoButtonGlow, { backgroundColor: 'rgba(59, 130, 246, 0.8)', shadowColor: '#3B82F6' }]} />
+                  <LinearGradient
+                    colors={['#1E3A8A', '#172554']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.designerPromoButton, { borderColor: 'rgba(96, 165, 250, 0.3)' }]}
+                  >
+                    <Text style={styles.designerPromoButtonText}>Try Visualiser</Text>
+                    <Feather name="image" size={16} color="#fff" style={{marginLeft: 6}} />
+                  </LinearGradient>
+                </View>
+              </View>
+            </View>
+            
+            <View style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 20 }}>
+                <Ionicons name="color-wand" size={100} color="rgba(255,255,255,0.15)" />
+            </View>
+          </TouchableOpacity>
+
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -359,7 +399,7 @@ const styles = StyleSheet.create({
   designerPromoContainer: {
     marginHorizontal: 20,
     marginTop: 25,
-    marginBottom: 40,
+    marginBottom: 10,
     position: 'relative',
     height: 220,
     shadowColor: '#000',

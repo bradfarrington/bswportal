@@ -26,6 +26,8 @@ import CatalogCategoriesScreen from "../screens/CatalogCategoriesScreen";
 import CatalogSubCategoriesScreen from "../screens/CatalogSubCategoriesScreen";
 import CatalogProductDetailsScreen from "../screens/CatalogProductDetailsScreen";
 import PdfViewerScreen from "../screens/PdfViewer";
+import VisualiserScreen from "../screens/VisualiserScreen";
+import VisualiserResultScreen from "../screens/VisualiserResultScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -284,6 +286,19 @@ const AppNavigator = () => {
       <Stack.Screen
         name="CatalogProductDetails"
         component={CatalogProductDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="VisualiserScreen"
+        component={VisualiserScreen}
+        options={{
+          title: "AI Visualiser",
+          headerTitleStyle: { fontFamily: "RB" },
+        }}
+      />
+      <Stack.Screen
+        name="VisualiserResult"
+        component={VisualiserResultScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
