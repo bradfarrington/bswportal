@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const VISUALISER_USAGE_KEY = '@visualiser_generation_count';
-const MAX_GENERATIONS = 5;
+const MAX_GENERATIONS = 99999;
 
 /**
  * Gets the current number of generations this device has performed.

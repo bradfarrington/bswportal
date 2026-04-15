@@ -59,56 +59,60 @@ const Dashboard = () => {
             </View>
           </View>
 
-          {/* Hero Slider */}
-          <View style={styles.heroContainer}>
-            <ScrollView
-              ref={scrollRef}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              decelerationRate="fast"
-              snapToInterval={SLIDER_WIDTH}
-              snapToAlignment="start"
-              contentContainerStyle={{ width: SLIDER_WIDTH * heroSlides.length }}
-            >
-              {heroSlides.map((slide, index) => (
-                <View key={index} style={[styles.heroCard, { width: CARD_WIDTH, marginRight: CARD_GAP }]}>  
-                  <LinearGradient
-                    colors={['#e5040a', '#e5040a']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
-                  />
-                  <View style={styles.heroContent}>
-                    <Text style={styles.heroTitle}>{slide.title}</Text>
-                  </View>
+          {false && (
+            <>
+              {/* Hero Slider */}
+              <View style={styles.heroContainer}>
+                <ScrollView
+                  ref={scrollRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  decelerationRate="fast"
+                  snapToInterval={SLIDER_WIDTH}
+                  snapToAlignment="start"
+                  contentContainerStyle={{ width: SLIDER_WIDTH * heroSlides.length }}
+                >
+                  {heroSlides.map((slide, index) => (
+                    <View key={index} style={[styles.heroCard, { width: CARD_WIDTH, marginRight: CARD_GAP }]}>  
+                      <LinearGradient
+                        colors={['#e5040a', '#e5040a']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFillObject}
+                      />
+                      <View style={styles.heroContent}>
+                        <Text style={styles.heroTitle}>{slide.title}</Text>
+                      </View>
 
-                  {/* Bottom Frosted Bar */}
-                  <View style={styles.frostedBar}>
-                     <View style={styles.frostedBackground} />
-                     <View style={styles.frostedBarContent}>
-                       <View>
-                         <Text style={styles.frostedTitle}>{slide.service}</Text>
-                         <Text style={styles.frostedSubtitle}>{slide.price}</Text>
-                       </View>
-                       <TouchableOpacity style={styles.bookNowBtn} onPress={() => navigation.navigate('Quote')}>
-                         <Text style={styles.bookNowText}>Book Now</Text>
-                       </TouchableOpacity>
-                     </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
+                      {/* Bottom Frosted Bar */}
+                      <View style={styles.frostedBar}>
+                         <View style={styles.frostedBackground} />
+                         <View style={styles.frostedBarContent}>
+                           <View>
+                             <Text style={styles.frostedTitle}>{slide.service}</Text>
+                             <Text style={styles.frostedSubtitle}>{slide.price}</Text>
+                           </View>
+                           <TouchableOpacity style={styles.bookNowBtn} onPress={() => navigation.navigate('Quote')}>
+                             <Text style={styles.bookNowText}>Book Now</Text>
+                           </TouchableOpacity>
+                         </View>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
 
-          {/* Dots */}
-          <View style={styles.dotsContainer}>
-             {heroSlides.map((_, index) => (
-               <View key={index} style={[styles.dot, activeSlide === index && styles.activeDot]} />
-             ))}
-          </View>
+              {/* Dots */}
+              <View style={styles.dotsContainer}>
+                 {heroSlides.map((_, index) => (
+                   <View key={index} style={[styles.dot, activeSlide === index && styles.activeDot]} />
+                 ))}
+              </View>
+            </>
+          )}
 
           {/* Categories */}
           <Text style={styles.sectionTitle}>View Products</Text>
@@ -170,41 +174,42 @@ const Dashboard = () => {
 
           {/* AI Visualiser Promo */}
           <TouchableOpacity 
-            style={[styles.designerPromoContainer, { marginTop: 10, marginBottom: 40 }]}
+            style={styles.aiPromoContainer}
             onPress={() => navigation.navigate('VisualiserScreen')}
             activeOpacity={0.9}
           >
-            <View style={styles.designerPromoInner}>
-              <LinearGradient
-                colors={['#1F2937', '#111827']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.designerPromoBackground}
+            <View style={styles.aiPromoInner}>
+              <Image
+                source={require('../assets/visualiser-card-bg.jpg')}
+                style={styles.aiPromoBackground}
+                resizeMode="cover"
               />
               
-              <View style={styles.designerPromoLeftContent}>
-                <Text style={[styles.designerPromoTitle, { fontSize: 22 }]}>AI Window{'\n'}Visualiser</Text>
-                <Text style={styles.designerPromoDescription}>
-                  Upload a photo to see{'\n'}new windows instantly.
+              <View style={styles.aiPromoContent}>
+                <Text style={styles.aiPromoTitle}>See New Windows{'\n'}Before You Buy</Text>
+                <Text style={styles.aiPromoDescription}>
+                  Upload a photo and try{'\n'}new windows instantly.
                 </Text>
                 
-                <View style={styles.designerPromoButtonWrapper}>
-                  <View style={[styles.designerPromoButtonGlow, { backgroundColor: 'rgba(59, 130, 246, 0.8)', shadowColor: '#3B82F6' }]} />
+                <View style={styles.aiPromoButtonWrapper}>
+                  <View style={styles.aiPromoButtonGlow} />
                   <LinearGradient
                     colors={['#1E3A8A', '#172554']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.designerPromoButton, { borderColor: 'rgba(96, 165, 250, 0.3)' }]}
+                    style={styles.aiPromoButton}
                   >
-                    <Text style={styles.designerPromoButtonText}>Try Visualiser</Text>
-                    <Feather name="image" size={16} color="#fff" style={{marginLeft: 6}} />
+                    <Text style={styles.aiPromoButtonText}>Try Visualiser</Text>
+                    <Feather name="arrow-right" size={16} color="#fff" style={{marginLeft: 8}} />
                   </LinearGradient>
                 </View>
               </View>
-            </View>
-            
-            <View style={{ position: 'absolute', right: 20, bottom: 20, zIndex: 20 }}>
-                <Ionicons name="color-wand" size={100} color="rgba(255,255,255,0.15)" />
+
+              <Image 
+                source={require('../assets/visualiser-card-img.jpg')} 
+                style={styles.aiPromoImage} 
+                resizeMode="contain"
+              />
             </View>
           </TouchableOpacity>
 
@@ -485,6 +490,95 @@ const styles = StyleSheet.create({
     width: 180,
     height: 235,
     zIndex: 20,
+  },
+  aiPromoContainer: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 40,
+    position: 'relative',
+    height: 220, // Reduced height since tags were removed
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 8,
+    zIndex: 10,
+  },
+  aiPromoInner: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  aiPromoBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  aiPromoContent: {
+    padding: 24,
+    zIndex: 2,
+    flex: 1,
+    width: '65%', // Keeping 65% so text doesn't overlap image too much
+    justifyContent: 'center', // Added to perfectly center remaining text vertically
+  },
+  aiPromoTitle: {
+    fontFamily: 'InterBold',
+    fontSize: 22,
+    lineHeight: 28,
+    color: '#FFFFFF',
+    marginBottom: 6, // Reduced from 8
+  },
+  aiPromoDescription: {
+    fontFamily: 'InterRegular',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#D4D4D8',
+    marginBottom: 14, // Reduced from 16
+  },
+  aiPromoButtonWrapper: {
+    alignSelf: 'flex-start',
+    position: 'relative',
+  },
+  aiPromoButtonGlow: {
+    position: 'absolute',
+    top: -2,
+    bottom: -2,
+    left: -2,
+    right: -2,
+    backgroundColor: 'rgba(30, 58, 138, 0.8)',
+    borderRadius: 22,
+    zIndex: 1,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  aiPromoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+  },
+  aiPromoButtonText: {
+    fontFamily: 'InterSemiBold',
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+  aiPromoImage: {
+    position: 'absolute',
+    right: -15, // Pushed to the right slightly
+    bottom: -5,  // Pushed down slightly
+    width: '55%', // Increased width slightly so it fills more
+    height: '105%', // Slightly taller to cover gaps
+    zIndex: 1,
   },
 });
 

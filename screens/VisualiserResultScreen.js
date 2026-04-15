@@ -14,50 +14,68 @@ import {
 } from "react-native";
 import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { Ionicons } from "@expo/vector-icons";
+import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
-import ViewShot from "react-native-view-shot";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: screenWidth } = Dimensions.get("window");
 const IMAGE_WIDTH = screenWidth - 32;
-const IMAGE_HEIGHT = IMAGE_WIDTH; // Square or dynamic, let's keep it 1:1 or 4:3. We'll use 1:1 for MVP predictability.
+const IMAGE_HEIGHT = IMAGE_WIDTH;
 
 export default function VisualiserResultScreen({ route, navigation }) {
   const { originalImage, generatedImage, options } = route.params;
 
   const [sliderPosition, setSliderPosition] = useState(IMAGE_WIDTH / 2);
   const [isSaving, setIsSaving] = useState(false);
-  const viewShotRef = useRef();
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => setScrollEnabled(false),
       onPanResponderMove: (evt, gestureState) => {
-        let newX = gestureState.moveX - 16; // Adjust for container padding
+        let newX = gestureState.moveX - 16;
         if (newX < 0) newX = 0;
         if (newX > IMAGE_WIDTH) newX = IMAGE_WIDTH;
         setSliderPosition(newX);
       },
+      onPanResponderRelease: () => setScrollEnabled(true),
+      onPanResponderTerminate: () => setScrollEnabled(true),
     })
   ).current;
 
   const handleDownload = async () => {
+    console.log("[Save] Button pressed");
+    console.log("[Save] URI:", generatedImage?.substring(0, 80));
     try {
       setIsSaving(true);
-      const permission = await MediaLibrary.requestPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert("Permission Required", "We need access to save photos to your camera roll.");
+
+      if (!generatedImage) {
+        Alert.alert("Error", "Image is still loading, please wait a moment.");
         setIsSaving(false);
         return;
       }
 
-      // Capture the watermarked view
-      const uri = await viewShotRef.current.capture();
-      await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert("Success", "The image has been saved to your camera roll.");
+      // Try saving directly to camera roll (skip requestPermissionsAsync which has a known native crash in this RN version)
+      try {
+        console.log("[Save] Attempting MediaLibrary.saveToLibraryAsync...");
+        await MediaLibrary.saveToLibraryAsync(generatedImage);
+        console.log("[Save] MediaLibrary save succeeded!");
+        Alert.alert("Saved!", "The image has been saved to your camera roll.");
+        return;
+      } catch (mlError) {
+        console.warn("[Save] MediaLibrary failed, falling back to share sheet:", mlError);
+      }
+
+      // Fallback: use share sheet
+      console.log("[Save] Using share sheet fallback...");
+      await Sharing.shareAsync(generatedImage, {
+        UTI: "public.image",
+        mimeType: "image/png",
+      });
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Failed to save the image.");
+      console.error("[Save] Error:", error);
+      Alert.alert("Error", "Failed to save the image. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -75,7 +93,7 @@ export default function VisualiserResultScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView scrollEnabled={scrollEnabled} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#111" />
@@ -86,8 +104,7 @@ export default function VisualiserResultScreen({ route, navigation }) {
 
         <Text style={styles.subtitle}>Drag the slider to compare before and after.</Text>
 
-        {/* The View to capture for downloading */}
-        <ViewShot ref={viewShotRef} options={{ format: "jpg", quality: 0.9 }}>
+        {/* Image Comparison Slider */}
           <View style={styles.imageContainer}>
             {/* Original Image (Background) */}
             <Image source={{ uri: originalImage }} style={styles.baseImage} resizeMode="cover" />
@@ -100,20 +117,23 @@ export default function VisualiserResultScreen({ route, navigation }) {
               {/* After label overlay on generated */}
               <View style={styles.afterLabel}><Text style={styles.labelText}>After</Text></View>
               
-              {/* Semi-transparent watermark at bottom right */}
-              <View style={styles.watermarkContainer}>
-                  <Image source={require("../assets/logo.png")} style={styles.watermarkImage} resizeMode="contain" />
+              {/* Semi-transparent watermark overlay covering the generated image */}
+              <View style={styles.watermarkOverlay} pointerEvents="none">
+                  <Image 
+                    source={require("../assets/composite-doors/background-1-no-bg.png")} 
+                    style={styles.watermarkImageFull} 
+                    resizeMode="cover" 
+                  />
               </View>
             </View>
 
             {/* Scrubber Handle */}
             <View style={[styles.scrubberLine, { left: sliderPosition }]} {...panResponder.panHandlers}>
               <View style={styles.scrubberKnob}>
-                <Ionicons name="swap-horizontal" size={20} color="#3B82F6" />
+                <Ionicons name="swap-horizontal" size={20} color="#E5040A" />
               </View>
             </View>
           </View>
-        </ViewShot>
 
         <View style={styles.optionsCard}>
           <Text style={styles.optionsTitle}>Selections Applied</Text>
@@ -259,7 +279,7 @@ const styles = StyleSheet.create({
       position: 'absolute',
       left: 12,
       top: 12,
-      backgroundColor: 'rgba(59, 130, 246, 0.8)',
+      backgroundColor: 'rgba(229, 4, 10, 0.8)',
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 16,
@@ -269,16 +289,15 @@ const styles = StyleSheet.create({
       fontFamily: 'InterSemiBold',
       fontSize: 12,
   },
-  watermarkContainer: {
-      position: 'absolute',
-      bottom: 20,
-      right: 20,
-      opacity: 0.85,
+  watermarkOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      justifyContent: 'center',
+      alignItems: 'center',
+      opacity: 0.15,
   },
-  watermarkImage: {
-      width: 100,
-      height: 40,
-      tintColor: '#FFF',
+  watermarkImageFull: {
+      width: '100%',
+      height: '100%',
   },
   optionsCard: {
     backgroundColor: "#FFF",
@@ -314,7 +333,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   downloadButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#E5040A",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

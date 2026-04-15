@@ -1,4 +1,5 @@
 import * as ImageManipulator from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system";
 
 // Production Supabase Edge Function URL
 const BACKEND_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-image`;
@@ -9,11 +10,10 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
  */
 export const prepareImageForUpload = async (imageUri) => {
   try {
-    // Max width/height to keep it within safe boundaries and OpenAI limits (1024 to 1536 max)
     const result = await ImageManipulator.manipulateAsync(
       imageUri,
       [{ resize: { width: 1024 } }], 
-      { format: ImageManipulator.SaveFormat.PNG }
+      { format: ImageManipulator.SaveFormat.JPEG, compress: 0.8 }
     );
     return result;
   } catch (err) {
@@ -24,6 +24,7 @@ export const prepareImageForUpload = async (imageUri) => {
 
 /**
  * Sends the image and user options to the generation backend.
+ * Uses base64 JSON body instead of FormData for reliable RN networking.
  */
 export const generateVisualiserImage = async (imageUri, options) => {
   const { windowColor, doorColor, style } = options;
@@ -33,50 +34,60 @@ export const generateVisualiserImage = async (imageUri, options) => {
   }
 
   try {
+    console.log("[Visualiser] Preparing image...");
     const processedImage = await prepareImageForUpload(imageUri);
 
-    const formData = new FormData();
-    formData.append("image", {
-      uri: processedImage.uri,
-      name: "upload.png",
-      type: "image/png",
+    // Read the processed image as base64
+    console.log("[Visualiser] Converting to base64...");
+    const base64 = await FileSystem.readAsStringAsync(processedImage.uri, {
+      encoding: FileSystem.EncodingType.Base64,
     });
-    formData.append("windowColor", windowColor);
-    if (doorColor) formData.append("doorColor", doorColor);
-    if (style) formData.append("style", style);
+    console.log(`[Visualiser] Base64 length: ${base64.length}`);
 
-    // Timeout handled by the Edge function usually, but we can set a local timeout
+    const body = {
+      imageBase64: base64,
+      windowColor,
+      doorColor: doorColor || null,
+      style: style || null,
+    };
+
+    console.log(`[Visualiser] Sending to: ${BACKEND_URL}`);
+
+    // OpenAI image generation can take 30-90s
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s max wait
+    const timeoutId = setTimeout(() => controller.abort(), 180000); // 180s max wait
 
     const response = await fetch(BACKEND_URL, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: formData,
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
     
     clearTimeout(timeoutId);
+    console.log(`[Visualiser] Response status: ${response.status}`);
 
     const responseData = await response.json();
 
     if (!response.ok) {
-        throw new Error(responseData.error || "Failed to edit image on backend.");
+      console.error("[Visualiser] Server error:", responseData);
+      throw new Error(responseData.error || "Failed to edit image on backend.");
     }
 
     if (!responseData.data || !responseData.data.url) {
-        throw new Error("Invalid response format received from backend.");
+      throw new Error("Invalid response format received from backend.");
     }
 
-    // OpenAI returns the URL of the generated image
+    console.log("[Visualiser] Success!");
     return responseData.data.url;
   } catch (error) {
     console.error("generateVisualiserImage Error:", error);
     if (error.name === "AbortError") {
       throw new Error("Request timed out. The server took too long to respond.");
     }
-    throw error; // Re-throw so UI can handle it gracefully.
+    throw error;
   }
 };

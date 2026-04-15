@@ -41,6 +41,10 @@
     <string>12</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>BSW Portal needs access to save your visualiser images to your photo library.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>BSW Portal needs access to your photo library to select images for the visualiser.</string>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>

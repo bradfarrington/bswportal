@@ -766,9 +766,9 @@ export const CATEGORIES = [
         id: "skyrooms-sub",
         title: "Skyrooms",
         image: require('../assets/skyroom-category-image.jpg'),
-        cardImage: require('../assets/living-spaces/skyrooms/card-image.png'),
+        cardImage: require('../assets/skyrooms/main-image.png'),
         tagline: "Ample headroom and unobstructed views of the sky above.",
-        heroImage: require('../assets/living-spaces/skyrooms/card-image.png'),
+        heroImage: require('../assets/skyrooms/main-image.png'),
         about: "The Skyroom mirrors the sleek appearance of a contemporary ultra-slim orangery lantern, both inside and out. It features no visible low tie bars or bulky joint covers, ensuring ample headroom and unobstructed views of the sky above.\n\nWith a 70% slimmer ridge and 30% slimmer rafter, our Skyroom combines aesthetic design, exceptional strength, and unmatched thermal performance. This results in a distinctive product that stands out in the market for its unique look and superior features.",
         stats: {
           rating: "4.9",
@@ -922,7 +922,7 @@ export const CATEGORIES = [
       {
         title: "Threshold Options",
         content: "Four threshold options to suit your needs, providing optimal weather resistance and easy access.",
-        overviewImage: require('../assets/doors/bi-fold-doors/styles/threshold-types/Level-1.png'),
+        overviewImage: require('../assets/doors/bi-fold-doors/styles/threshold-types/Level-3.png'),
         overviewImageMode: 'contain'
       },
       {

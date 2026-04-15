@@ -19,7 +19,9 @@
       "bundleIdentifier": "com.bradbtfx.BSWCustomerPortal",
       "buildNumber": "12",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "BSW Portal needs access to save your visualiser images to your photo library.",
+        "NSPhotoLibraryUsageDescription": "BSW Portal needs access to your photo library to select images for the visualiser."
       }
     },
     "android": {
@@ -36,7 +38,21 @@
       }
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "BSW Portal needs access to save your visualiser images.",
+          "savePhotosPermission": "BSW Portal needs permission to save images to your camera roll."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "BSW Portal needs access to your photos for the AI visualiser.",
+          "cameraPermission": "BSW Portal needs your camera to take photos of your home."
+        }
+      ]
     ]
   }
 }
