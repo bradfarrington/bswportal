@@ -13,7 +13,7 @@ export const prepareImageForUpload = async (imageUri) => {
     const result = await ImageManipulator.manipulateAsync(
       imageUri,
       [{ resize: { width: 1024 } }], 
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      { format: ImageManipulator.SaveFormat.PNG }
     );
     return result;
   } catch (err) {
@@ -38,8 +38,8 @@ export const generateVisualiserImage = async (imageUri, options) => {
     const formData = new FormData();
     formData.append("image", {
       uri: processedImage.uri,
-      name: "upload.jpg",
-      type: "image/jpeg",
+      name: "upload.png",
+      type: "image/png",
     });
     formData.append("windowColor", windowColor);
     if (doorColor) formData.append("doorColor", doorColor);
