@@ -14,67 +14,53 @@ import { useEffect, useState } from "react";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import styles from "../components/style";
-import { collection, getDocs, query } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { firestoreDb } from "../config/firebaseConfig";
+import { supabase } from "../config/supabaseClient";
 import { useNavigation } from "@react-navigation/native";
 const { scale } = Dimensions.get("window");
 const MaintenanceGuides = () => {
-  const [BrochureData, setBrochureData] = useState([]);
   const [MaintenanceData, setMaintenanceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(null);
   const { navigate } = useNavigation();
   const getData = async () => {
     try {
-      const data1 = [];
-      const data2 = [];
-
-      const lastQueryTime = await AsyncStorage.getItem("lastQueryTime");
+      const lastQueryTime = await AsyncStorage.getItem("lastQueryTimeMaintenance");
       const currentTime = Date.now();
       setLoading(true);
       if (
         !lastQueryTime ||
         currentTime - parseInt(lastQueryTime) >= 24 * 60 * 60 * 1000
       ) {
-        const q1 = query(collection(firestoreDb, "brochures"));
-        const q2 = query(collection(firestoreDb, "maintenanceguides"));
-        const result1 = await getDocs(q1);
-        const result2 = await getDocs(q2);
-        result1.forEach((x) => {
-          data1.push(x.data());
-        });
-        result2.forEach((x) => {
-          data2.push(x.data());
-        });
-        setBrochureData(data1);
-        setMaintenanceData(data2);
+        const { data: guides, error } = await supabase
+          .from("maintenance_guides")
+          .select("*");
+
+        if (error) throw error;
+
+        setMaintenanceData(guides || []);
 
         // Update the last query time in AsyncStorage
-        await AsyncStorage.setItem("lastQueryTime", currentTime.toString());
+        await AsyncStorage.setItem("lastQueryTimeMaintenance", currentTime.toString());
 
         // Store the data in AsyncStorage
-        await AsyncStorage.setItem("cachedBrochureData", JSON.stringify(data1));
         await AsyncStorage.setItem(
           "cachedMaintenanceData",
-          JSON.stringify(data2)
+          JSON.stringify(guides || [])
         );
-        console.log("from firebase");
+        console.log("from supabase");
       } else {
         // Use cached data if 24 hours haven't passed
         console.log("cached data");
-        const cachedBrochureData = JSON.parse(
-          await AsyncStorage.getItem("cachedBrochureData")
-        );
         const cachedMaintenanceData = JSON.parse(
           await AsyncStorage.getItem("cachedMaintenanceData")
         );
-        setBrochureData(cachedBrochureData);
-        setMaintenanceData(cachedMaintenanceData);
+        setMaintenanceData(cachedMaintenanceData || []);
       }
       setLoading(false);
     } catch (e) {
       console.log("request failed:", e);
+      setLoading(false);
     }
   };
   useEffect(() => {
@@ -149,8 +135,6 @@ const MaintenanceGuides = () => {
           <ActivityIndicator size={"large"} />
         </View>
       )}
-
-      {/* <Text style={styles.BSW}>Bradley Scott Windows</Text> */}
     </View>
   );
 };

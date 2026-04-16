@@ -168,31 +168,7 @@ const Tabs = () => {
   );
 };
 
-function BrochuresTabs() {
-  return (
-    <TopTabs.Navigator
-      screenOptions={({ route }) => ({
-        tabBarActiveTintColor: "red",
-        tabBarInactiveTintColor: "grey",
-        tabBarIndicatorStyle: {
-          backgroundColor: "red",
-        },
-        tabBarLabelStyle: {
-          fontWeight: "bold",
-        },
-        tabBarStyle: {
-          backgroundColor: "#F9F9FB",
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 0,
-        },
-      })}
-    >
-      <TopTabs.Screen name="Our Products" component={Brochures} />
-      <TopTabs.Screen name="Maintenance Guides" component={MaintenanceGuides} />
-    </TopTabs.Navigator>
-  );
-}
+
 
 const AppNavigator = () => {
   return (
@@ -216,12 +192,19 @@ const AppNavigator = () => {
       <Stack.Screen
         name="PDfViewer"
         component={PdfViewerScreen}
-        options={{ headerShown: true, title: "Read" }}
+        options={{ headerShown: false, contentStyle: { backgroundColor: "#000" } }}
       />
       <Stack.Screen
         name="HomeScreen"
         component={Tabs}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Brochures"
+        component={Brochures}
+        options={{
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="Products"

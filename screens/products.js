@@ -8,8 +8,7 @@ import {
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome } from "@expo/vector-icons";
-import { collection, getDocs, query } from "firebase/firestore";
-import { firestoreDb } from "../config/firebaseConfig";
+import { supabase } from "../config/supabaseClient";
 import styles, { backButtonSize } from "../components/style";
 
 const Products = () => {
@@ -19,19 +18,18 @@ const Products = () => {
 
   const getData = async () => {
     try {
-      const data = [];
       setLoading(true);
-      const q = query(collection(firestoreDb, "products"));
-      const result = await getDocs(q);
-      result.forEach((x) => {
-        data.push({
-          id: x.id,
-        });
-      });
-      setProductsData(data);
+      const { data, error } = await supabase
+        .from("display_categories")
+        .select("id");
+
+      if (error) throw error;
+
+      setProductsData(data || []);
       setLoading(false);
     } catch (e) {
-      console.log("reuest failed:", e);
+      console.log("request failed:", e);
+      setLoading(false);
     }
   };
   useEffect(() => {

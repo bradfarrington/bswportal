@@ -1,8 +1,7 @@
 import { StyleSheet, Text, View, Image, TouchableOpacity, Dimensions } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
-import { doc, setDoc } from "firebase/firestore";
-import { firestoreDb } from "../config/firebaseConfig";
+import { supabase } from "../config/supabaseClient";
 import { registerForPushNotificationsAsync } from "../components/pushNotifications";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -13,19 +12,22 @@ const Home = () => {
   const [pushToken, setPushToken] = useState();
   const currentDate = new Date();
   
-  const addTokentoFirebase = async () => {
+  const addTokenToSupabase = async () => {
     try {
       if (pushToken) {
-        await setDoc(doc(firestoreDb, "pushTokens", pushToken), {
-          expoPushToken: pushToken,
-          TimeStamp: currentDate,
-        });
-        console.log("Token Add succesfully");
+        const { error } = await supabase
+          .from("push_tokens")
+          .upsert(
+            { expo_push_token: pushToken },
+            { onConflict: "expo_push_token" }
+          );
+        if (error) throw error;
+        console.log("Token added successfully");
       }
       navigation.navigate("HomeScreen");
     } catch (e) {
       navigation.navigate("HomeScreen");
-      console.log("error while adding document", e);
+      console.log("error while adding token", e);
     }
   };
 
@@ -62,7 +64,7 @@ const Home = () => {
         
         <TouchableOpacity
           style={styles.buttonStyle}
-          onPress={() => addTokentoFirebase()}
+          onPress={() => addTokenToSupabase()}
           activeOpacity={0.8}
         >
           <Text style={styles.buttonTitle}>Get Started</Text>

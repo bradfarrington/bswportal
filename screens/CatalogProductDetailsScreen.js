@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { MaterialIcons, Feather, AntDesign } from '@expo/vector-icons';
 import axios from 'axios';
+import ImageViewer from 'react-native-image-zoom-viewer';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -24,15 +25,33 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollViewRef = useRef(null);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [selectedLabel, setSelectedLabel] = useState('');
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [isViewerVisible, setIsViewerVisible] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryAlbumId, setGalleryAlbumId] = useState(null);
   const [galleryAlbumTitle, setGalleryAlbumTitle] = useState('');
 
   const openImage = (imageSource, label = '') => {
-    setSelectedImage(imageSource);
-    setSelectedLabel(label);
+    let images = [];
+    if (imageSource && imageSource.uri) {
+      images = [{ url: imageSource.uri }];
+    } else {
+      images = [{ url: '', props: { source: imageSource } }];
+    }
+    
+    setViewerImages(images);
+    setViewerIndex(0);
+    setIsViewerVisible(true);
+  };
+
+  const openGalleryImage = (index) => {
+    const images = galleryPhotos.map(photo => ({
+      url: photo.url_l || photo.url_c || photo.url_z || photo.url_o || buildPhotoUrl(photo, 'b'),
+    }));
+    setViewerImages(images);
+    setViewerIndex(index);
+    setIsViewerVisible(true);
   };
 
   // Fetch Flickr gallery photos matching the product album name
@@ -156,11 +175,11 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.galleryScroll}
           >
-            {galleryPhotos.map((photo) => (
+            {galleryPhotos.map((photo, index) => (
               <TouchableOpacity 
                 key={photo.id} 
                 activeOpacity={0.8}
-                onPress={() => openImage({ uri: buildPhotoUrl(photo, 'b') })}
+                onPress={() => openGalleryImage(index)}
               >
                 <Image 
                   source={{ uri: photo.url_m || buildPhotoUrl(photo, 'z') }} 
@@ -371,35 +390,38 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
 
         {/* Image Lightbox Modal */}
         <Modal
-          visible={selectedImage !== null}
+          visible={isViewerVisible}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setSelectedImage(null)}
+          onRequestClose={() => setIsViewerVisible(false)}
         >
-          <View style={styles.modalOverlay}>
-            <SafeAreaView style={styles.modalSafeArea}>
-              {/* Close button */}
-              <TouchableOpacity 
-                style={styles.modalCloseButton} 
-                onPress={() => setSelectedImage(null)}
+          <ImageViewer
+            imageUrls={viewerImages}
+            index={viewerIndex}
+            enableSwipeDown={true}
+            onCancel={() => setIsViewerVisible(false)}
+            onSwipeDown={() => setIsViewerVisible(false)}
+            saveToLocalByLongPress={false}
+            backgroundColor="rgba(0,0,0,0.95)"
+            renderIndicator={(currentIndex, allSize) => {
+              if (allSize <= 1) return null;
+              return (
+                <View style={styles.indicator}>
+                  <Text style={styles.indicatorText}>
+                    {currentIndex} / {allSize}
+                  </Text>
+                </View>
+              );
+            }}
+            renderHeader={() => (
+              <TouchableOpacity
+                onPress={() => setIsViewerVisible(false)}
+                style={styles.closeButton}
               >
-                <Feather name="x" size={24} color="#fff" />
+                <AntDesign name="close" size={22} color="#fff" />
               </TouchableOpacity>
-
-              {/* Expanded Image */}
-              <View style={styles.modalImageContainer}>
-                {selectedImage && (
-                  <Image 
-                    source={selectedImage} 
-                    style={styles.modalImage} 
-                    resizeMode="contain" 
-                  />
-                )}
-              </View>
-
-              {/* Label */}
-            </SafeAreaView>
-          </View>
+            )}
+          />
         </Modal>
       </View>
     </SafeAreaView>
@@ -752,49 +774,34 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   // Modal Lightbox
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.92)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalSafeArea: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCloseButton: {
+  closeButton: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 20,
+    top: 50,
     right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
+    zIndex: 999,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    zIndex: 10,
+    alignItems: 'center',
   },
-  modalImageContainer: {
-    width: SCREEN_WIDTH - 40,
-    maxHeight: SCREEN_HEIGHT * 0.7,
-    borderRadius: 50,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
+  indicator: {
+    position: 'absolute',
+    top: 55,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 998,
   },
-  modalImage: {
-    width: SCREEN_WIDTH - 40,
-    height: undefined,
-    aspectRatio: 1,
-    maxHeight: SCREEN_HEIGHT * 0.7,
-    borderRadius: 50,
-  },
-  modalLabel: {
+  indicatorText: {
     color: '#fff',
-    fontSize: 18,
-    fontFamily: 'RB',
-    marginTop: 20,
-    textAlign: 'center',
+    fontFamily: 'RM',
+    fontSize: 15,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
 });

@@ -11,8 +11,7 @@ import * as Animatable from "react-native-animatable";
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome } from "@expo/vector-icons";
-import { doc, getDoc } from "firebase/firestore";
-import { firestoreDb } from "../config/firebaseConfig";
+import { supabase } from "../config/supabaseClient";
 import styles, { backButtonSize } from "../components/style";
 
 const DisplayProducts = (props) => {
@@ -45,18 +44,22 @@ const DisplayProducts = (props) => {
   }, [navigation]);
 
   const getData = async () => {
-    const docRef = doc(firestoreDb, "products", `${id}`);
     try {
-      setLoading(false);
-      const result = await getDoc(docRef);
-      const data = result.data().products;
-      setItemsData(data);
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("display_products")
+        .select("*")
+        .eq("category_id", id);
+
+      if (error) throw error;
+
+      setItemsData(data || []);
       setLoading(false);
     } catch (e) {
-      console.log("reuest failed:", e);
+      console.log("request failed:", e);
+      setLoading(false);
     }
   };
-  console.log(itemData);
   useEffect(() => {
     getData();
   }, []);
@@ -105,8 +108,8 @@ const DisplayProducts = (props) => {
               desc: item.description,
               name: item.name,
               price: item.price,
-              url: item.picUrl,
-              oldPrice: item.oldPrice,
+              url: item.pic_url,
+              oldPrice: item.old_price,
               images: item.images,
             });
           }}
