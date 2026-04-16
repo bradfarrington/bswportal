@@ -46,45 +46,84 @@ async function run() {
         
         const lowered = p.toLowerCase();
         
+        // --- Size detection ---
         if (lowered.includes('width') || lowered.includes('height')) {
+          // Skip if it's clearly not a measurement (e.g. "Sliding Doors come as a set")
+          if (lowered.includes('width') && !lowered.match(/\d/) && !lowered.match(/width\s*:/i)) {
+            additional_info.push(p);
+            return;
+          }
           p = p.replace(/size\s*:/i, '').trim();
           const subParts = p.split(/\s*-\s*/);
           let matchedSize = false;
           subParts.forEach(sp => {
             if (sp.toLowerCase().includes('width')) {
-              width = sp.replace(/width:?/i, '').trim();
+              width = sp.replace(/width\s*:?\s*/i, '').trim();
               matchedSize = true;
             } else if (sp.toLowerCase().includes('height')) {
-              height = sp.replace(/height:?/i, '').trim();
+              height = sp.replace(/height\s*:?\s*/i, '').trim();
               matchedSize = true;
-            } else {
+            } else if (matchedSize) {
+              // Leftover sub-part in a size line
               additional_info.push(sp.trim());
             }
           });
           if (matchedSize) return;
         }
 
-        if (lowered.includes('colour:') || lowered.includes('color:')) {
+        // --- "Colour:" prefixed detection (handles "Colour :" with space) ---
+        if (/colou?r\s*:/i.test(lowered)) {
           const splitByColor = p.split(/colou?r\s*:/i);
-          if (splitByColor[0].trim() !== '' && splitByColor[0].trim() !== '-') {
+          // Anything before "Colour:" is a product type name
+          if (splitByColor[0] && splitByColor[0].trim() !== '' && splitByColor[0].trim() !== '-') {
              additional_info.push(splitByColor[0].replace(/\s*-\s*$/, '').trim());
           }
           
           const colorStr = splitByColor.length > 1 ? splitByColor[1].trim() : '';
           const colorParts = colorStr.split(/\s*-\s*/);
-          let matchedColor = false;
           colorParts.forEach(cp => {
               if (cp.toLowerCase().includes('external')) {
                  colour_external = cp.replace(/external/i, '').trim();
-                 matchedColor = true;
               } else if (cp.toLowerCase().includes('internal')) {
                  colour_internal = cp.replace(/internal/i, '').trim();
-                 matchedColor = true;
-              } else {
-                 additional_info.push(`Colour: ${cp.trim()}`);
               }
           });
-          if (matchedColor) return;
+          return;
+        }
+
+        // --- "X In Colour Both Sides" detection ---
+        if (lowered.includes('in colour both sides') || lowered.includes('both sides')) {
+          const colour = p.replace(/in colou?r both sides/i, '').replace(/both sides/i, '').trim();
+          if (colour) {
+            colour_internal = colour;
+            colour_external = colour;
+          }
+          return;
+        }
+
+        // --- Standalone "X Internal" or "X External" (no Colour: prefix) ---
+        if (lowered.endsWith('internal') || lowered.match(/internal$/i)) {
+          const colour = p.replace(/internal$/i, '').trim();
+          if (colour && !lowered.includes('hinged') && !lowered.includes('opening') && !lowered.includes('sliding') && !lowered.includes('double')) {
+            colour_internal = colour;
+            return;
+          }
+        }
+        if (lowered.endsWith('external') || lowered.match(/external$/i)) {
+          const colour = p.replace(/external$/i, '').trim();
+          if (colour && !lowered.includes('hinged') && !lowered.includes('opening') && !lowered.includes('damage')) {
+            colour_external = colour;
+            return;
+          }
+        }
+
+        // --- Length as alternative to height (e.g. rooflights) ---
+        if (lowered.startsWith('length')) {
+          const val = p.replace(/length\s*:?\s*/i, '').trim();
+          if (val && /\d/.test(val)) {
+            height = val;
+            return;
+          }
         }
 
         additional_info.push(p);

@@ -187,7 +187,13 @@ const AppNavigator = () => {
       <Stack.Screen
         name="Designer"
         component={Designer}
-        options={{ headerShown: true, title: "Door Designer", headerTitleStyle: { fontFamily: "RB" } }}
+        options={{
+          headerShown: true,
+          title: "Door Designer",
+          headerTitleStyle: { fontFamily: "RB", fontSize: 17 },
+          headerStyle: { backgroundColor: '#F9FAFB' },
+          headerShadowVisible: false,
+        }}
       />
       <Stack.Screen
         name="PDfViewer"
