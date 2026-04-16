@@ -4,7 +4,7 @@ import Brochures from "../screens/Brochures";
 import Designer from "../screens/Designer";
 import Portal from "../screens/Portal";
 import Quote from "../screens/Quote";
-import Products from "../screens/products";
+import SaleCategoriesScreen from "../screens/SaleCategoriesScreen";
 import Orders from "../screens/Portal";
 import Home from "../screens/Home";
 import Dashboard from "../screens/Dashboard";
@@ -17,8 +17,8 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import DisplayProducts from "../screens/DisplayProducts";
-import ProductDetails from "../screens/productDetails";
+import SaleProductsScreen from "../screens/SaleProductsScreen";
+import SaleProductDetailScreen from "../screens/SaleProductDetailScreen";
 import { Entypo } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import MaintenanceGuides from "../screens/maintenanceGuides";
@@ -163,7 +163,7 @@ const Tabs = () => {
       <Tab.Screen name="Orders" component={Orders} />
       <Tab.Screen name="Gallery" component={GalleryScreen} />
       <Tab.Screen name="Products" component={CatalogCategoriesScreen} />
-      <Tab.Screen name="Sale" component={Products} />
+      <Tab.Screen name="Sale" component={SaleCategoriesScreen} />
     </Tab.Navigator>
   );
 };
@@ -207,8 +207,8 @@ const AppNavigator = () => {
         }}
       />
       <Stack.Screen
-        name="Products"
-        component={DisplayProducts}
+        name="SaleProducts"
+        component={SaleProductsScreen}
         options={{
           headerTitleStyle: {
             fontFamily: "RB",
@@ -233,8 +233,8 @@ const AppNavigator = () => {
         })}
       />
       <Stack.Screen
-        name="ProductDetails"
-        component={ProductDetails}
+        name="SaleProductDetail"
+        component={SaleProductDetailScreen}
         options={{
           headerTitleStyle: {
             fontFamily: "RB",

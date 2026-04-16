@@ -103,14 +103,20 @@ const DisplayProducts = (props) => {
         <TouchableOpacity
           style={styles.button}
           onPress={() => {
-            navigation.navigate("ProductDetails", {
+            navigation.navigate("SaleProductDetail", {
               id: item.id,
-              desc: item.description,
               name: item.name,
               price: item.price,
               url: item.pic_url,
               oldPrice: item.old_price,
               images: item.images,
+              desc: item.description,
+              width: item.width,
+              height: item.height,
+              colourInternal: item.colour_internal,
+              colourExternal: item.colour_external,
+              glazed: item.glazed,
+              additionalInfo: item.additional_info,
             });
           }}
         >
