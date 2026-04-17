@@ -20,6 +20,7 @@
     "@react-navigation/native-stack": "^7.3.21",
     "@supabase/supabase-js": "^2.103.3",
     "axios": "^1.10.0",
+    "dotenv": "^17.4.2",
     "expo": "^53.0.19",
     "expo-asset": "~11.1.7",
     "expo-av": "^16.0.8",

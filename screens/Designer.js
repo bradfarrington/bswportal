@@ -230,6 +230,31 @@ const Designer = () => {
     }
   };
 
+  const filterValidSidelights = (opts) => {
+    if (!opts) return [];
+    return opts.filter(o => {
+      // Validate bounds inside SVG wrapper
+      if (!o.SVG) return true;
+      let width = null, height = null;
+      const viewBoxMatch = o.SVG.match(/viewBox="[\d\.\-]+\s+[\d\.\-]+\s+([\d\.]+)\s+([\d\.]+)"/);
+      if (viewBoxMatch) {
+        width = parseFloat(viewBoxMatch[1]);
+        height = parseFloat(viewBoxMatch[2]);
+      } else {
+        const wMatch = o.SVG.match(/width="([\d\.]+)"/);
+        const hMatch = o.SVG.match(/height="([\d\.]+)"/);
+        if (wMatch && hMatch) {
+          width = parseFloat(wMatch[1]);
+          height = parseFloat(hMatch[1]);
+        }
+      }
+      if (width && height && height > 0) {
+        return (width / height) < 0.38;
+      }
+      return true;
+    });
+  };
+
   const isStepVisible = (stepDef, jobData) => {
     if (!stepDef) return false;
     const catId = stepDef.category;
@@ -242,8 +267,15 @@ const Designer = () => {
 
     if (catId !== 11 && jobData) {
       const heading = findHeading(jobData, catId);
-      if (heading && heading.Visible !== false && heading.Options && heading.Options.filter(o => !o.ValidButHidden).length > 0) {
-        return true;
+      if (heading && heading.Visible !== false && heading.Options) {
+        let validOpts = heading.Options.filter(o => !o.ValidButHidden);
+        
+        // Ensure steps with massive Side Panel slabs are dynamically skipped if only slabs returned
+        if (catId === OptionCategories.SidelightStyle) {
+          validOpts = filterValidSidelights(validOpts);
+        }
+
+        if (validOpts.length > 0) return true;
       }
       return false;
     }
@@ -275,7 +307,14 @@ const Designer = () => {
       const visibleSteps = getVisibleSteps();
       const index = visibleSteps.findIndex(s => s.id === step);
       const scrollIndex = index !== -1 ? index : step - 1;
-      stepsScrollRef.current?.scrollTo({ x: Math.max(0, scrollIndex * 85 - 40), animated: true });
+      
+      const PILL_ESTIMATED_WIDTH = 115; // Average width including gaps
+      const centerPosition = (scrollIndex * PILL_ESTIMATED_WIDTH) + (PILL_ESTIMATED_WIDTH / 2) - (SCREEN_WIDTH / 2);
+      
+      stepsScrollRef.current?.scrollTo({ 
+        x: Math.max(0, centerPosition), 
+        animated: true 
+      });
     }, 100);
   };
 
@@ -289,10 +328,12 @@ const Designer = () => {
     }
   };
 
-  // Toggle inside/outside view via WebView bridge
+  // Toggle inside/outside view entirely natively!
+  // The backend API `ToggleViewPosition` wipes color and sidelight configs.
+  // Instead, we flip the graphic entirely natively in the front-end DOM.
   const handleToggleView = () => {
-    setSelecting(true);
-    apiWebViewRef.current?.injectJavaScript(generateToggleViewJS());
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setViewedFromInside(prev => !prev);
   };
 
   // Submit enquiry via WebView bridge
@@ -350,11 +391,16 @@ const Designer = () => {
     }
 
     // For all other categories, ALWAYS use the LIVE API data.
-    // This ensures we only show options valid for the CURRENT door config,
-    // and that we display the dynamically generated SVG/Images rather than static scraper fallbacks.
     if (job) {
       const heading = findHeading(job, categoryId);
-      return heading?.Options?.filter(o => !o.ValidButHidden) || [];
+      let validOpts = heading?.Options?.filter(o => !o.ValidButHidden) || [];
+      
+      // Filter Sidelight Styles to ONLY show narrow panels, excluding full door slabs
+      if (categoryId === OptionCategories.SidelightStyle && validOpts.length > 0) {
+        validOpts = filterValidSidelights(validOpts);
+      }
+
+      return validOpts;
     }
     return [];
   };
@@ -481,6 +527,55 @@ const Designer = () => {
         (function() {
           var svg = document.querySelector('svg');
           if (!svg) return;
+
+          var isInside = ${viewedFromInside};
+          if (isInside) {
+            // Parse SVG tree for known Hardware ID layers injected by the ASP.NET API
+            var knockersLayer = document.querySelector('[id*="Knocker"]') || document.querySelector('[id*="knocker"]');
+            var handlesLayer = document.querySelector('[id*="Handle"]') || document.querySelector('[id*="handle"]');
+            
+            // Mirror the ENTIRE door framework to simulate the inside opposite angle (hinges swap sides)
+            var container = document.getElementById('container');
+            if (container) {
+              container.style.transform = 'scaleX(-1)';
+            }
+
+            // Detect hardware layers geometrically to avoid GUID string collisions that wipe colours
+            var images = document.querySelectorAll('image');
+            images.forEach(function(img) {
+              try {
+                var width = parseFloat(img.getAttribute('width') || 0);
+                var height = parseFloat(img.getAttribute('height') || 0);
+                var x = parseFloat(img.getAttribute('x') || 0);
+                var y = parseFloat(img.getAttribute('y') || 0);
+                var cx = x + (width/2);
+                var cy = y + (height/2);
+                var ratio = width / height;
+
+                // Typically, door canvas is ~906x2000. 
+                // Handles are small, thin, and positioned vertically near middle-center, but horizontally to the edge
+                // Knockers are small, central horizontally, and high vertically.
+                var isSmall = (width * height) < 200000; // Less than 10% of door area
+                var isHigh = cy < 1100;
+                var isCenter = cx > 300 && cx < 600;
+                var isEdge = cx < 300 || cx > 600;
+
+                if (isSmall) {
+                  if (isHigh && isCenter) {
+                    // This is highly likely the Knocker or Letterplate (if centrally aligned and high up)
+                    if (cy < 800) {
+                      img.style.display = 'none'; // Hide Knocker
+                    }
+                  } else if (isEdge && height > 50 && width < 300) {
+                    // This is highly likely the Lever Handle (on the edge, tall and thin)
+                    img.style.transformOrigin = cx + 'px center';
+                    img.style.transform = 'scaleX(-1)';
+                  }
+                }
+              } catch(e) {}
+            });
+          }
+
           // Force preserveAspectRatio for proper scaling
           svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
           // Try to crop the viewBox to just the content
@@ -633,6 +728,7 @@ const Designer = () => {
 
     const heading = getCurrentHeading();
     const isCarouselStep = categoryId === 11 || 
+                           categoryId === OptionCategories.DoorRange ||
                            categoryId === OptionCategories.DoorColourExternal || 
                            categoryId === OptionCategories.DoorColourInternal ||
                            categoryId === OptionCategories.DoorGlass ||
@@ -673,9 +769,45 @@ const Designer = () => {
               const heading = getCurrentHeading();
               const apiOption = heading?.Options?.find(o => o.ID === optionId);
               const dataLinkID = heading?.DataLinkID || option.data_link_id || EMPTY_GUID_VALUE;
+
+              const isSidelightStyle = categoryId === OptionCategories.SidelightStyle;
               const svgData = apiOption?.SVG || option.svg_data || option.SVG;
               const imageUrl = (apiOption && getOptionImageUrl(apiOption)) || option.image_url || getOptionImageUrl(option);
               const uniqueKey = option.id || `${optionId}-${idx}`;
+
+              // Helper function to extract <image> tags from SVGs and stack them natively.
+              // Includes physical envelope scaling to maintain exact aspect ratios!
+              const renderNativeSvgImageStack = (svgString) => {
+                let vbW = 900, vbH = 2000;
+                const vbMatch = svgString.match(/viewBox="[\d\.\-]+\s+[\d\.\-]+\s+([\d\.]+)\s+([\d\.]+)"/);
+                if (vbMatch) { vbW = parseFloat(vbMatch[1]); vbH = parseFloat(vbMatch[2]); }
+                
+                const imageMatches = [...svgString.matchAll(/<image[\s\S]*?x="([^"]+)"[\s\S]*?y="([^"]+)"[\s\S]*?width="([^"]+)"[\s\S]*?height="([^"]+)"[\s\S]*?(?:href|xlink:href)="([^"]+)"/g)];
+                if (imageMatches.length === 0) return null;
+
+                const scale = Math.min(120 / vbW, 180 / vbH);
+                const finalW = vbW * scale;
+                const finalH = vbH * scale;
+
+                return (
+                  <View style={{ width: finalW, height: finalH, alignSelf: 'center' }}>
+                    {imageMatches.map((m, i) => (
+                      <Image
+                        key={i}
+                        source={{ uri: m[5].replace(/&amp;/g, '&') }}
+                        style={{
+                          position: 'absolute',
+                          left: `${(parseFloat(m[1]) / vbW) * 100}%`,
+                          top: `${(parseFloat(m[2]) / vbH) * 100}%`,
+                          width: `${(parseFloat(m[3]) / vbW) * 100}%`,
+                          height: `${(parseFloat(m[4]) / vbH) * 100}%`,
+                        }}
+                        resizeMode="stretch"
+                      />
+                    ))}
+                  </View>
+                );
+              };
 
               return (
                 <TouchableOpacity
@@ -686,8 +818,55 @@ const Designer = () => {
                   disabled={selecting}
                 >
                   <View style={styles.styleCardImageWrap}>
-                    {svgData ? (
-                      <SvgXml xml={svgData} width="100%" height="100%" />
+                    {svgData && categoryId === OptionCategories.SidelightStyle ? (
+                      <View style={{ width: 120, height: 180, overflow: 'hidden' }} pointerEvents="none">
+                        <WebView
+                          source={{ html: `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                              <style>
+                                * { margin: 0; padding: 0; box-sizing: border-box; }
+                                html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+                                body { display: flex; justify-content: center; align-items: center; }
+                                #container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+                                svg { max-width: 100%; max-height: 100%; object-fit: contain; }
+                              </style>
+                            </head>
+                            <body>
+                              <div id="container">${svgData}</div>
+                              <script>
+                                (function() {
+                                  var svg = document.querySelector('svg');
+                                  if (!svg) return;
+                                  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                                  function crop() {
+                                    try {
+                                      var bbox = svg.getBBox();
+                                      if (bbox.width > 0 && bbox.height > 0) {
+                                        var pad = 2;
+                                        svg.setAttribute('viewBox', (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' + (bbox.width + pad*2) + ' ' + (bbox.height + pad*2));
+                                        svg.style.width = '100%';
+                                        svg.style.height = '100%';
+                                      }
+                                    } catch(e) {}
+                                  }
+                                  crop(); setTimeout(crop, 300);
+                                })();
+                              </script>
+                            </body>
+                            </html>
+                          `, baseUrl: IMAGE_BASE_URL + '/' }}
+                          style={{ width: 120, height: 180, backgroundColor: 'transparent' }}
+                          scrollEnabled={false}
+                          showsVerticalScrollIndicator={false}
+                          showsHorizontalScrollIndicator={false}
+                          originWhitelist={['*']}
+                        />
+                      </View>
+                    ) : svgData ? (
+                      svgData.includes('<image') ? renderNativeSvgImageStack(svgData) || <SvgXml xml={svgData} width="100%" height="100%" /> : <SvgXml xml={svgData} width="100%" height="100%" />
                     ) : imageUrl ? (
                       <Image
                         source={{ uri: imageUrl }}
