@@ -230,40 +230,52 @@ const Designer = () => {
     }
   };
 
+  const isStepVisible = (stepDef, jobData) => {
+    if (!stepDef) return false;
+    const catId = stepDef.category;
+
+    if (catId === 11 && localData) {
+      if (localSelections[66] && localData?.rangeStyles?.[localSelections[66]]?.length > 0) return true;
+      if (localData?.options?.[11]?.length > 0) return true;
+      return false;
+    }
+
+    if (catId !== 11 && jobData) {
+      const heading = findHeading(jobData, catId);
+      if (heading && heading.Visible !== false && heading.Options && heading.Options.filter(o => !o.ValidButHidden).length > 0) {
+        return true;
+      }
+      return false;
+    }
+    
+    // Fallback check if job hasn't loaded
+    return true;
+  };
+
   // Determine next step, skipping invisible/empty categories
   const getNextStep = (current, jobData) => {
-    const maxStep = LOCAL_WIZARD_STEPS.length; // 12 steps
+    const maxStep = LOCAL_WIZARD_STEPS.length;
     let next = current + 1;
     while (next <= maxStep) {
       const stepDef = LOCAL_WIZARD_STEPS[next - 1];
-      if (!stepDef) break;
-      const catId = stepDef.category;
-
-      // Check local data first
-      if (localData?.options?.[catId]?.length > 0) {
+      if (isStepVisible(stepDef, jobData)) {
         return next;
-      }
-
-      // For styles filtered by range, check rangeStyles
-      if (catId === 11 && localSelections[66] && localData?.rangeStyles?.[localSelections[66]]?.length > 0) {
-        return next;
-      }
-
-      // Fall back to API heading
-      if (jobData) {
-        const heading = findHeading(jobData, catId);
-        if (heading && heading.Visible !== false && heading.Options && heading.Options.length > 0) {
-          return next;
-        }
       }
       next++;
     }
     return Math.min(next, FINISH_STEP); // go to finish panel
   };
 
+  const getVisibleSteps = () => {
+    return LOCAL_WIZARD_STEPS.filter(step => isStepVisible(step, job));
+  };
+
   const scrollToStep = (step) => {
     setTimeout(() => {
-      stepsScrollRef.current?.scrollTo({ x: Math.max(0, (step - 1) * 85 - 40), animated: true });
+      const visibleSteps = getVisibleSteps();
+      const index = visibleSteps.findIndex(s => s.id === step);
+      const scrollIndex = index !== -1 ? index : step - 1;
+      stepsScrollRef.current?.scrollTo({ x: Math.max(0, scrollIndex * 85 - 40), animated: true });
     }, 100);
   };
 
@@ -308,18 +320,13 @@ const Designer = () => {
     apiWebViewRef.current?.reload();
   };
 
-  // Get options for current step - use local Supabase data primarily
+  // Get options for current step
   const getCurrentOptions = () => {
     // Finish step: hardware sub-menus or empty (finish panel renders separately)
     if (currentStep === FINISH_STEP) {
-      if (hardwareSection) {
-        if (localData?.options?.[hardwareSection]) {
-          return localData.options[hardwareSection].filter(o => !o.valid_but_hidden);
-        }
-        if (job) {
-          const heading = findHeading(job, hardwareSection);
-          return heading?.Options?.filter(o => !o.ValidButHidden) || [];
-        }
+      if (hardwareSection && job) {
+        const heading = findHeading(job, hardwareSection);
+        return heading?.Options?.filter(o => !o.ValidButHidden) || [];
       }
       return [];
     }
@@ -328,7 +335,7 @@ const Designer = () => {
     if (!stepDef) return [];
     const categoryId = stepDef.category;
 
-    // For door styles (cat 11), filter by selected range
+    // For door styles (cat 11), filter by selected range using Supabase data
     if (categoryId === 11 && localData) {
       const selectedRange = localSelections[66];
       if (selectedRange && localData.rangeStyles?.[selectedRange]) {
@@ -342,12 +349,9 @@ const Designer = () => {
       return allStyles.filter(o => !o.parent_option_id && !o.valid_but_hidden);
     }
 
-    // Use local Supabase data
-    if (localData?.options?.[categoryId]) {
-      return deduplicateOptions(localData.options[categoryId].filter(o => !o.valid_but_hidden));
-    }
-
-    // Fall back to API data
+    // For all other categories, ALWAYS use the LIVE API data.
+    // This ensures we only show options valid for the CURRENT door config,
+    // and that we display the dynamically generated SVG/Images rather than static scraper fallbacks.
     if (job) {
       const heading = findHeading(job, categoryId);
       return heading?.Options?.filter(o => !o.ValidButHidden) || [];
@@ -410,7 +414,7 @@ const Designer = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.stepsContent}
       >
-        {LOCAL_WIZARD_STEPS.map((step) => {
+        {getVisibleSteps().map((step) => {
           const isActive = step.id === currentStep;
           const isCompleted = step.id < currentStep;
           const isLocked = step.id > currentStep;
@@ -464,9 +468,9 @@ const Designer = () => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { width: 100%; height: 100%; overflow: hidden; background: #F9FAFB; }
-          body { display: flex; justify-content: center; align-items: flex-end; height: 100%; }
-          #container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; }
+          html, body { width: 100%; height: 100%; overflow: hidden; background: #fff; }
+          body { display: flex; justify-content: center; align-items: flex-start; height: 100%; }
+          #container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; }
           svg { display: block; max-width: 100%; max-height: 100%; }
         </style>
       </head>
@@ -478,13 +482,13 @@ const Designer = () => {
           var svg = document.querySelector('svg');
           if (!svg) return;
           // Force preserveAspectRatio for proper scaling
-          svg.setAttribute('preserveAspectRatio', 'xMidYMax meet');
+          svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
           // Try to crop the viewBox to just the content
           function crop() {
             try {
               var bbox = svg.getBBox();
               if (bbox.width > 0 && bbox.height > 0) {
-                var pad = 10;
+                var pad = 2;
                 svg.setAttribute('viewBox',
                   (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' +
                   (bbox.width + pad*2) + ' ' + (bbox.height + pad*2)
@@ -628,7 +632,12 @@ const Designer = () => {
     }
 
     const heading = getCurrentHeading();
-    const isStyleStep = categoryId === 11;
+    const isCarouselStep = categoryId === 11 || 
+                           categoryId === OptionCategories.DoorColourExternal || 
+                           categoryId === OptionCategories.DoorColourInternal ||
+                           categoryId === OptionCategories.DoorGlass ||
+                           categoryId === OptionCategories.SidelightStyle ||
+                           categoryId === OptionCategories.SidelightGlass;
 
     return (
       <View style={styles.optionsSection}>
@@ -650,8 +659,8 @@ const Designer = () => {
           )}
         </View>
 
-        {/* Door styles: horizontal scrollable carousel */}
-        {isStyleStep ? (
+        {/* Horizontal scrollable carousel for Styles and Colours */}
+        {isCarouselStep ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -662,9 +671,10 @@ const Designer = () => {
               const optionId = option.original_id || option.ID;
               const optionDesc = option.description || option.Description;
               const heading = getCurrentHeading();
+              const apiOption = heading?.Options?.find(o => o.ID === optionId);
               const dataLinkID = heading?.DataLinkID || option.data_link_id || EMPTY_GUID_VALUE;
-              const svgData = option.svg_data || option.SVG;
-              const imageUrl = option.image_url || getOptionImageUrl(option);
+              const svgData = apiOption?.SVG || option.svg_data || option.SVG;
+              const imageUrl = (apiOption && getOptionImageUrl(apiOption)) || option.image_url || getOptionImageUrl(option);
               const uniqueKey = option.id || `${optionId}-${idx}`;
 
               return (
@@ -986,18 +996,20 @@ const Designer = () => {
   // -- MAIN RENDER --
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Hidden WebView: loads the ASPX page to establish session, then handles all API calls */}
-      <WebView
-        ref={apiWebViewRef}
-        source={{ uri: SESSION_PAGE_URL }}
-        style={{ width: 0, height: 0, position: 'absolute', opacity: 0 }}
-        onLoadEnd={handleSessionPageLoaded}
-        onMessage={handleApiMessage}
-        javaScriptEnabled={true}
-        thirdPartyCookiesEnabled={true}
-        sharedCookiesEnabled={true}
-      />
+      <View style={{ width: 0, height: 0, overflow: 'hidden', position: 'absolute' }}>
+        <WebView
+          ref={apiWebViewRef}
+          source={{ uri: SESSION_PAGE_URL }}
+          style={{ width: 0, height: 0, opacity: 0 }}
+          onLoadEnd={handleSessionPageLoaded}
+          onMessage={handleApiMessage}
+          javaScriptEnabled={true}
+          thirdPartyCookiesEnabled={true}
+          sharedCookiesEnabled={true}
+        />
+      </View>
 
       {/* Loading overlay - only show full overlay if local data not ready */}
       {(loading && !localDataReady) && (
@@ -1015,7 +1027,7 @@ const Designer = () => {
       )}
 
       {localDataReady && (
-        <>
+        <View style={{ flex: 1, width: '100%' }}>
           {/* Door Preview - Top section */}
           <View style={styles.previewSection}>
             {renderDoorPreview()}
@@ -1028,12 +1040,12 @@ const Designer = () => {
           <View style={styles.optionsPanel}>
             {renderOptionsGrid()}
           </View>
-        </>
+        </View>
       )}
 
       {/* Enquiry Modal */}
       {renderEnquiryModal()}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -1075,16 +1087,11 @@ const styles = StyleSheet.create({
 
   // Preview Section
   previewSection: {
-    height: '38%',
+    height: '42%',
     backgroundColor: '#fff',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 4,
     overflow: 'hidden',
+    paddingTop: 16,
+    paddingBottom: 4,
   },
   previewContainer: {
     flex: 1,
@@ -1223,13 +1230,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   styleCard: {
-    width: 100,
+    width: 140,
     alignItems: 'center',
   },
   styleCardSelected: {},
   styleCardImageWrap: {
-    width: 80,
-    height: 120,
+    width: 120,
+    height: 180,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,

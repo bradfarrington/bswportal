@@ -23,11 +23,13 @@ export const OptionCategories = {
   DoorColourExternal: 9,
   DoorColourInternal: 10,
   FrameColour: 27,
-  HardwareColour: 35,
+  HardwareType: 35,
   HardwareHandle: 17,
   HardwareLetterplate: 20,
   HardwareKnocker: 19,
   SideSlabType: 94,
+  SidelightStyle: 55,
+  SidelightGlass: 58,
 };
 
 // Wizard step order

@@ -193,6 +193,7 @@ const AppNavigator = () => {
           headerTitleStyle: { fontFamily: "RB", fontSize: 17 },
           headerStyle: { backgroundColor: '#F9FAFB' },
           headerShadowVisible: false,
+          contentStyle: { paddingTop: 0, marginTop: 0 },
         }}
       />
       <Stack.Screen

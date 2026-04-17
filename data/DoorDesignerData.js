@@ -37,6 +37,7 @@ export async function loadOptions(headingTypeId = null, parentOptionId = null) {
   const query = supabase
     .from('door_designer_options')
     .select('*')
+    .eq('is_active', true)
     .order('sort_order');
 
   if (headingTypeId) {
@@ -97,6 +98,7 @@ export async function getStylesForRange(rangeOriginalId) {
     .select('*')
     .eq('heading_type_id', 11)
     .eq('parent_option_id', rangeOriginalId)
+    .eq('is_active', true)
     .order('sort_order');
 
   if (error) {
@@ -138,18 +140,23 @@ export const WIZARD_STEPS = [
   { id: 1, label: 'Door Type', category: 101, icon: 'layout' },
   { id: 2, label: 'Left Sidelight', category: 102, icon: 'sidebar' },
   { id: 3, label: 'Right Sidelight', category: 103, icon: 'sidebar' },
-  { id: 4, label: 'Range', category: 66, icon: 'grid' },
-  { id: 5, label: 'Style', category: 11, icon: 'star' },
-  { id: 6, label: 'Ext. Colour', category: 9, icon: 'droplet' },
-  { id: 7, label: 'Int. Colour', category: 10, icon: 'droplet' },
-  { id: 8, label: 'Glass', category: 12, icon: 'eye' },
-  { id: 9, label: 'Hinge Side', category: 13, icon: 'rotate-cw' },
-  { id: 10, label: 'Handle', category: 17, icon: 'tool' },
-  { id: 11, label: 'Knocker', category: 19, icon: 'disc' },
-  { id: 12, label: 'Letterplate', category: 20, icon: 'mail' },
+  { id: 4, label: 'Sidelight Type', category: 94, icon: 'columns' },
+  { id: 5, label: 'Range', category: 66, icon: 'grid' },
+  { id: 6, label: 'Style', category: 11, icon: 'star' },
+  { id: 7, label: 'Ext. Colour', category: 9, icon: 'droplet' },
+  { id: 8, label: 'Int. Colour', category: 10, icon: 'droplet' },
+  { id: 9, label: 'Frame Colour', category: 27, icon: 'maximize' },
+  { id: 10, label: 'Glass', category: 12, icon: 'eye' },
+  { id: 11, label: 'Sidelight Style', category: 55, icon: 'sidebar' },
+  { id: 12, label: 'Sidelight Glass', category: 58, icon: 'eye' },
+  { id: 13, label: 'Hinge Side', category: 13, icon: 'rotate-cw' },
+  { id: 14, label: 'Hardware Type', category: 35, icon: 'shield' },
+  { id: 15, label: 'Handle', category: 17, icon: 'tool' },
+  { id: 16, label: 'Knocker', category: 19, icon: 'disc' },
+  { id: 17, label: 'Letterplate', category: 20, icon: 'mail' },
 ];
 
 /**
  * Categories that should render as image tiles (not list items)
  */
-export const IMAGE_TILE_CATEGORIES = [101, 102, 103, 66, 9, 10, 27, 12, 13, 35, 17, 19, 20];
+export const IMAGE_TILE_CATEGORIES = [101, 102, 103, 94, 66, 9, 10, 27, 12, 55, 58, 13, 35, 17, 19, 20];
