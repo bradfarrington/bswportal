@@ -4,6 +4,8 @@ import {
   ActivityIndicator, Image, Dimensions, Platform, TextInput, Modal,
   KeyboardAvoidingView, Alert, LayoutAnimation, UIManager, Animated,
 } from 'react-native';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
@@ -132,6 +134,8 @@ const Designer = () => {
   // Hardware sub-menu (in finish step)
   const [hardwareSection, setHardwareSection] = useState(null);
   const [finishTab, setFinishTab] = useState('spec');  // 'spec' or 'hardware'
+  const [downloading, setDownloading] = useState(false);
+  const [showWatermark, setShowWatermark] = useState(false);
 
   // View toggle
   const [viewedFromInside, setViewedFromInside] = useState(false);
@@ -442,6 +446,102 @@ const Designer = () => {
     setSelecting(true);
     const js = generateToggleViewJS();
     apiWebViewRef.current?.injectJavaScript(js);
+  };
+
+  // Download both door views with watermark to camera roll
+  const handleDownloadImages = async () => {
+    setDownloading(true);
+    try {
+      // Request photo library permission
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to save images.');
+        setDownloading(false);
+        return;
+      }
+
+      // Show watermark overlay
+      setShowWatermark(true);
+      await new Promise(r => setTimeout(r, 300));
+
+      // Helper: wait for next render and capture (reuses enquiry pattern)
+      const waitForRenderAndCapture = () => {
+        return new Promise((resolve) => {
+          captureResolveRef.current = resolve;
+          setTimeout(() => {
+            if (captureResolveRef.current === resolve) {
+              captureResolveRef.current = null;
+              resolve(null);
+            }
+          }, 5000);
+        });
+      };
+
+      const savedFiles = [];
+
+      // Capture current view (outside by default)
+      if (previewContainerRef.current) {
+        try {
+          const uri = await captureRef(previewContainerRef, { format: 'png', quality: 1, result: 'tmpfile' });
+          if (uri) {
+            try {
+              await MediaLibrary.saveToLibraryAsync(uri);
+            } catch (mlErr) {
+              // Fallback: use share sheet if MediaLibrary fails
+              console.log('[DoorDesigner] MediaLibrary failed, using share sheet');
+              await Sharing.shareAsync(uri, { UTI: 'public.image', mimeType: 'image/png' });
+            }
+            savedFiles.push(viewedFromInside ? 'Inside' : 'Outside');
+            console.log(`[DoorDesigner] Saved ${viewedFromInside ? 'inside' : 'outside'} view`);
+          }
+        } catch (e) {
+          console.log('[DoorDesigner] Save current view failed:', e.message);
+        }
+      }
+
+      // Toggle to the other view, capture that too
+      const capturePromise = waitForRenderAndCapture();
+      apiWebViewRef.current?.injectJavaScript(generateToggleViewJS());
+      await capturePromise;
+      await new Promise(r => setTimeout(r, 300));
+
+      if (previewContainerRef.current) {
+        try {
+          const uri = await captureRef(previewContainerRef, { format: 'png', quality: 1, result: 'tmpfile' });
+          if (uri) {
+            try {
+              await MediaLibrary.saveToLibraryAsync(uri);
+            } catch (mlErr) {
+              console.log('[DoorDesigner] MediaLibrary failed, using share sheet');
+              await Sharing.shareAsync(uri, { UTI: 'public.image', mimeType: 'image/png' });
+            }
+            savedFiles.push(!viewedFromInside ? 'Inside' : 'Outside');
+            console.log(`[DoorDesigner] Saved other view`);
+          }
+        } catch (e) {
+          console.log('[DoorDesigner] Save other view failed:', e.message);
+        }
+      }
+
+      // Toggle back to original view
+      const restorePromise = waitForRenderAndCapture();
+      apiWebViewRef.current?.injectJavaScript(generateToggleViewJS());
+      await restorePromise;
+
+      // Hide watermark
+      setShowWatermark(false);
+
+      if (savedFiles.length > 0) {
+        Alert.alert('Saved!', `${savedFiles.join(' & ')} views saved to your camera roll.`);
+      } else {
+        Alert.alert('Error', 'Failed to save images. Please try again.');
+      }
+    } catch (err) {
+      console.error('[DoorDesigner] Download error:', err);
+      setShowWatermark(false);
+      Alert.alert('Error', 'Failed to save images. Please try again.');
+    }
+    setDownloading(false);
   };
 
   // Submit enquiry via Supabase Edge Function (SMTP email)
@@ -887,6 +987,17 @@ const Designer = () => {
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Watermark overlay (shown during download capture) */}
+        {showWatermark && (
+          <View style={styles.watermarkOverlay} pointerEvents="none">
+            <Image
+              source={require('../assets/composite-doors/background-1-no-bg.png')}
+              style={styles.watermarkImageFull}
+              resizeMode="cover"
+            />
+          </View>
+        )}
       </View>
     );
   };
@@ -1316,6 +1427,19 @@ const Designer = () => {
               <Feather name="plus-circle" size={16} color="#4B5563" />
               <Text style={styles.finishSecondaryText}>New Door</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.finishSecondaryBtn}
+              onPress={handleDownloadImages}
+              disabled={downloading}
+              activeOpacity={0.7}
+            >
+              {downloading ? (
+                <ActivityIndicator size="small" color="#4B5563" />
+              ) : (
+                <Feather name="download" size={16} color="#4B5563" />
+              )}
+              <Text style={styles.finishSecondaryText}>{downloading ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.enquiryButton}
@@ -1672,6 +1796,17 @@ const styles = StyleSheet.create({
     fontFamily: 'RM',
     color: '#fff',
     marginLeft: 6,
+  },
+  watermarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.15,
+    zIndex: 10,
+  },
+  watermarkImageFull: {
+    width: '100%',
+    height: '100%',
   },
 
   // Step Indicator
