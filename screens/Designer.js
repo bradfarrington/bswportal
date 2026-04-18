@@ -8,6 +8,8 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
+import { captureRef } from 'react-native-view-shot';
+import { supabase } from '../config/supabaseClient';
 import {
   getStoredImageUrl, findHeading, getSelectedDescription,
   OptionCategories, WIZARD_STEPS as API_WIZARD_STEPS, EMPTY_GUID_VALUE,
@@ -129,6 +131,7 @@ const Designer = () => {
 
   // Hardware sub-menu (in finish step)
   const [hardwareSection, setHardwareSection] = useState(null);
+  const [finishTab, setFinishTab] = useState('spec');  // 'spec' or 'hardware'
 
   // View toggle
   const [viewedFromInside, setViewedFromInside] = useState(false);
@@ -138,6 +141,9 @@ const Designer = () => {
   const apiWebViewRef = useRef(null);  // Hidden WebView for API calls
   const svgWebViewRef = useRef(null);  // Visible WebView for SVG preview
   const pendingCallbackRef = useRef(null);
+  const previewContainerRef = useRef(null);  // For capturing preview as image
+  const doorImagesRef = useRef({ outside: null, inside: null });  // Cached base64 captures
+  const captureResolveRef = useRef(null);  // Promise resolver for capture-on-render
 
   // Load local data from Supabase on mount
   useEffect(() => {
@@ -438,15 +444,160 @@ const Designer = () => {
     apiWebViewRef.current?.injectJavaScript(js);
   };
 
-  // Submit enquiry via WebView bridge
-  const handleSubmitEnquiry = () => {
+  // Submit enquiry via Supabase Edge Function (SMTP email)
+  const handleSubmitEnquiry = async () => {
     if (!enquiryForm.name.trim() || !enquiryForm.email.trim()) {
       Alert.alert('Required', 'Please enter your name and email.');
       return;
     }
     setEnquirySubmitting(true);
-    const js = generateSubmitEnquiryJS(enquiryForm);
-    apiWebViewRef.current?.injectJavaScript(js);
+    try {
+      console.log('[DoorDesigner] Starting enquiry submission...');
+
+      // Helper: wait for next render and capture
+      const waitForRenderAndCapture = () => {
+        return new Promise((resolve) => {
+          captureResolveRef.current = resolve;
+          // Timeout fallback in case PREVIEW_RENDERED never fires
+          setTimeout(() => {
+            if (captureResolveRef.current === resolve) {
+              captureResolveRef.current = null;
+              resolve(null);
+            }
+          }, 5000);
+        });
+      };
+
+      // Step 1: Capture current view (should be outside)
+      if (previewContainerRef.current) {
+        try {
+          const base64 = await captureRef(previewContainerRef, { format: 'png', quality: 0.9, result: 'base64' });
+          const key = viewedFromInside ? 'inside' : 'outside';
+          doorImagesRef.current[key] = base64;
+          console.log(`[DoorDesigner] Captured ${key}: ${base64?.length} chars`);
+        } catch (e) {
+          console.log('[DoorDesigner] Initial capture failed:', e.message);
+        }
+      }
+
+      // Step 2: If we don't have the other view, toggle → capture → toggle back
+      const missingView = viewedFromInside ? 'outside' : 'inside';
+      if (!doorImagesRef.current[missingView]) {
+        console.log(`[DoorDesigner] Auto-capturing ${missingView} view...`);
+        
+        // Toggle to the other view
+        const capturePromise = waitForRenderAndCapture();
+        const js = generateToggleViewJS();
+        apiWebViewRef.current?.injectJavaScript(js);
+        
+        const capturedBase64 = await capturePromise;
+        if (capturedBase64) {
+          doorImagesRef.current[missingView] = capturedBase64;
+          console.log(`[DoorDesigner] Auto-captured ${missingView}: ${capturedBase64.length} chars`);
+        }
+
+        // Toggle back to original view
+        const restorePromise = waitForRenderAndCapture();
+        apiWebViewRef.current?.injectJavaScript(generateToggleViewJS());
+        await restorePromise;
+        console.log('[DoorDesigner] Restored original view');
+      }
+
+      console.log('[DoorDesigner] Final images - outside:', !!doorImagesRef.current.outside, 'inside:', !!doorImagesRef.current.inside);
+
+      // Upload captured images to Supabase Storage
+      let outsideImageUrl = null;
+      let insideImageUrl = null;
+      const timestamp = Date.now();
+
+      const uploadImage = async (base64, viewName) => {
+        if (!base64) {
+          console.log(`[DoorDesigner] No ${viewName} image to upload (null)`);
+          return null;
+        }
+        console.log(`[DoorDesigner] Uploading ${viewName} image (${base64.length} chars)...`);
+        
+        const fileName = `door-${timestamp}-${viewName}.png`;
+        const filePath = `enquiries/${fileName}`;
+        
+        try {
+          // Convert base64 to Uint8Array (RN compatible)
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+
+          const { data, error } = await supabase.storage
+            .from('door-enquiries')
+            .upload(filePath, bytes, { contentType: 'image/png', upsert: true });
+
+          if (error) {
+            console.log(`[DoorDesigner] Upload ${viewName} FAILED:`, error.message);
+            return null;
+          }
+          console.log(`[DoorDesigner] Upload ${viewName} SUCCESS:`, data?.path);
+
+          const { data: urlData } = supabase.storage
+            .from('door-enquiries')
+            .getPublicUrl(filePath);
+          console.log(`[DoorDesigner] ${viewName} public URL:`, urlData?.publicUrl);
+          return urlData?.publicUrl || null;
+        } catch (uploadErr) {
+          console.log(`[DoorDesigner] Upload ${viewName} EXCEPTION:`, uploadErr.message);
+          return null;
+        }
+      };
+
+      outsideImageUrl = await uploadImage(doorImagesRef.current.outside, 'outside');
+      insideImageUrl = await uploadImage(doorImagesRef.current.inside, 'inside');
+      console.log('[DoorDesigner] Image URLs:', { outsideImageUrl, insideImageUrl });
+
+      const SUPABASE_URL = 'https://kmrfnaurkbmkkoumfnxp.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcmZuYXVya2Jta2tvdW1mbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNjY4NTAsImV4cCI6MjA5MTg0Mjg1MH0.V64OETndBlnMMn7ymtv2M3e5GmX3ROk1FwbIaC1_N1k';
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-door-enquiry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          name: enquiryForm.name,
+          email: enquiryForm.email,
+          phone: enquiryForm.phone,
+          postcode: enquiryForm.postcode,
+          feedback: enquiryForm.feedback,
+          outsideImageUrl,
+          insideImageUrl,
+          doorSpec: {
+            doorStyle: getSelectedDescription(job, OptionCategories.DoorDesign),
+            externalColour: getSelectedDescription(job, OptionCategories.DoorColourExternal),
+            internalColour: getSelectedDescription(job, OptionCategories.DoorColourInternal),
+            frameColour: getSelectedDescription(job, OptionCategories.FrameColour),
+            glass: getSelectedDescription(job, OptionCategories.DoorGlass),
+            handle: getSelectedDescription(job, OptionCategories.HardwareHandle),
+            letterplate: getSelectedDescription(job, OptionCategories.HardwareLetterplate),
+            knocker: getSelectedDescription(job, OptionCategories.HardwareKnocker),
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setEnquirySubmitting(false);
+        setEnquirySuccess(true);
+        // Clear captured images for next enquiry
+        doorImagesRef.current = { outside: null, inside: null };
+      } else {
+        throw new Error(result.error || 'Failed to send enquiry.');
+      }
+    } catch (err) {
+      console.error('[DoorDesigner] Enquiry error:', err);
+      setEnquirySubmitting(false);
+      Alert.alert('Error', err.message || 'Failed to send enquiry. Please try again.');
+    }
   };
 
   // Reset everything
@@ -642,7 +793,7 @@ const Designer = () => {
               // Method 2: Match knocker by its actual stored image URL from the API data
               var knockerImageId = '${(() => {
                 if (!job?.Headings) return '';
-                const knockerHeading = job.Headings.find(h => h.HeadingTypeID === 19); // OptionCategories.HardwareKnocker
+                const knockerHeading = job.Headings.find(h => h.HeadingTypeID === 19);
                 if (!knockerHeading || !knockerHeading.OptionSelectedID || knockerHeading.OptionSelectedID === EMPTY_GUID_VALUE) return '';
                 const selectedOpt = knockerHeading.Options?.find(o => o.ID === knockerHeading.OptionSelectedID);
                 if (!selectedOpt?.StoredImageID || selectedOpt.StoredImageID === EMPTY_GUID_VALUE) return '';
@@ -658,34 +809,6 @@ const Designer = () => {
                   }
                 });
               }
-
-              // Method 3: Geometric fallback — hide small images positioned in the upper-center of the door
-              var images = document.querySelectorAll('image');
-              var svgEl = document.querySelector('svg');
-              var vb = svgEl ? svgEl.getAttribute('viewBox') : null;
-              var canvasW = 906, canvasH = 2000;
-              if (vb) {
-                var parts = vb.split(/\\s+/);
-                if (parts.length === 4) { canvasW = parseFloat(parts[2]); canvasH = parseFloat(parts[3]); }
-              }
-              
-              images.forEach(function(img) {
-                try {
-                  var w = parseFloat(img.getAttribute('width') || 0);
-                  var h = parseFloat(img.getAttribute('height') || 0);
-                  var x = parseFloat(img.getAttribute('x') || 0);
-                  var y = parseFloat(img.getAttribute('y') || 0);
-                  var cx = x + (w/2);
-                  var cy = y + (h/2);
-                  var area = w * h;
-                  var doorArea = canvasW * canvasH;
-
-                  // Knockers: small (<5% door area), horizontally centered (middle third), upper half
-                  if (area < doorArea * 0.05 && cx > canvasW * 0.3 && cx < canvasW * 0.7 && cy < canvasH * 0.45) {
-                    img.style.display = 'none';
-                  }
-                } catch(e) {}
-              });
             }
             
             // Run immediately and after images have loaded
@@ -724,7 +847,7 @@ const Designer = () => {
     `;
 
     return (
-      <View style={styles.previewContainer}>
+      <View style={styles.previewContainer} ref={previewContainerRef} collapsable={false}>
         <WebView
           ref={svgWebViewRef}
           source={{ html: svgHtml, baseUrl: IMAGE_BASE_URL + '/' }}
@@ -737,6 +860,20 @@ const Designer = () => {
           onMessage={(event) => {
             if (event.nativeEvent.data === 'PREVIEW_RENDERED') {
               setPreviewRendering(false);
+              // If there's a pending capture promise (from enquiry flow), resolve it
+              if (captureResolveRef.current && previewContainerRef.current) {
+                const resolve = captureResolveRef.current;
+                captureResolveRef.current = null;
+                setTimeout(async () => {
+                  try {
+                    const base64 = await captureRef(previewContainerRef, { format: 'png', quality: 0.9, result: 'base64' });
+                    resolve(base64);
+                  } catch (e) {
+                    console.log('[DoorDesigner] Render-capture failed:', e.message);
+                    resolve(null);
+                  }
+                }, 800);
+              }
             }
           }}
         />
@@ -1080,80 +1217,123 @@ const Designer = () => {
     ].filter(item => findHeading(job, item.category));
 
     return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.finishContainer}>
-        {/* Summary Card */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeader}>
-            <Feather name="check-circle" size={20} color="#059669" />
-            <Text style={styles.summaryTitle}>Your Door Specification</Text>
-          </View>
-          {summaryItems.map((item, idx) => (
-            <View key={idx} style={[styles.summaryRow, idx === summaryItems.length - 1 && { borderBottomWidth: 0 }]}>
-              <Text style={styles.summaryLabel}>{item.label}</Text>
-              <Text style={styles.summaryValue}>{item.value}</Text>
-            </View>
-          ))}
+      <View style={styles.finishContainer}>
+        {/* Tabs */}
+        <View style={styles.finishTabBar}>
+          <TouchableOpacity
+            style={[styles.finishTab, finishTab === 'spec' && styles.finishTabActive]}
+            onPress={() => setFinishTab('spec')}
+            activeOpacity={0.7}
+          >
+            <Feather name="file-text" size={15} color={finishTab === 'spec' ? '#e5040a' : '#9CA3AF'} />
+            <Text style={[styles.finishTabText, finishTab === 'spec' && styles.finishTabTextActive]}>
+              Specification
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.finishTab, finishTab === 'hardware' && styles.finishTabActive]}
+            onPress={() => setFinishTab('hardware')}
+            activeOpacity={0.7}
+          >
+            <Feather name="settings" size={15} color={finishTab === 'hardware' ? '#e5040a' : '#9CA3AF'} />
+            <Text style={[styles.finishTabText, finishTab === 'hardware' && styles.finishTabTextActive]}>
+              Hardware
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Hardware Customization */}
-        {hardwareOptions.length > 0 && (
-          <View style={styles.hardwareSection}>
-            <Text style={styles.hardwareSectionTitle}>Customise Hardware</Text>
-            <View style={styles.hardwareGrid}>
-              {hardwareOptions.map((hw) => (
-                <TouchableOpacity
-                  key={hw.category}
-                  style={styles.hardwareCard}
-                  onPress={() => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                    setHardwareSection(hw.category);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.hardwareIconContainer}>
-                    <Feather name={hw.icon} size={22} color="#e5040a" />
-                  </View>
-                  <Text style={styles.hardwareLabel}>{hw.label}</Text>
-                  <Text style={styles.hardwareCurrent} numberOfLines={1}>
-                    {getSelectedDescription(job, hw.category) || 'Choose'}
-                  </Text>
-                  <Feather name="chevron-right" size={16} color="#999" style={{ marginTop: 4 }} />
-                </TouchableOpacity>
+        {/* Tab Content */}
+        {finishTab === 'spec' ? (
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.finishScrollContent}>
+            <View style={styles.summaryCard}>
+              {summaryItems.map((item, idx) => (
+                <View key={idx} style={[styles.summaryRow, idx === summaryItems.length - 1 && { borderBottomWidth: 0 }]}>
+                  <Text style={styles.summaryLabel}>{item.label}</Text>
+                  <Text style={styles.summaryValue}>{item.value}</Text>
+                </View>
               ))}
             </View>
-          </View>
+          </ScrollView>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.finishScrollContent}>
+            {hardwareOptions.length > 0 ? (
+              <View style={styles.hardwareGrid}>
+                {hardwareOptions.map((hw) => {
+                  const currentVal = getSelectedDescription(job, hw.category);
+                  return (
+                    <TouchableOpacity
+                      key={hw.category}
+                      style={styles.hardwareCard}
+                      onPress={() => {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        setHardwareSection(hw.category);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.hardwareCardLeft}>
+                        <View style={styles.hardwareIconContainer}>
+                          <Feather name={hw.icon} size={18} color="#e5040a" />
+                        </View>
+                        <View style={styles.hardwareCardInfo}>
+                          <Text style={styles.hardwareLabel}>{hw.label}</Text>
+                          <Text style={styles.hardwareCurrent} numberOfLines={1}>
+                            {currentVal || 'Select...'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Feather name="chevron-right" size={18} color="#D1D5DB" />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyOptions}>
+                <Text style={styles.emptyOptionsText}>No hardware options available.</Text>
+              </View>
+            )}
+          </ScrollView>
         )}
 
-        {/* View Toggle */}
-        <TouchableOpacity style={styles.viewToggleButton} onPress={handleToggleView} disabled={selecting}>
-          <Feather name="refresh-cw" size={18} color="#4B5563" />
-          <Text style={styles.viewToggleButtonText}>
-            {viewedFromInside ? 'View from Outside' : 'View from Inside'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Send Enquiry */}
-        <TouchableOpacity
-          style={styles.enquiryButton}
-          onPress={() => { setEnquirySuccess(false); setShowEnquiry(true); }}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={['#e5040a', '#B80008']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.enquiryButtonGradient}
+        {/* Sticky Bottom Actions */}
+        <View style={styles.finishActions}>
+          <View style={styles.finishActionsRow}>
+            <TouchableOpacity
+              style={styles.finishSecondaryBtn}
+              onPress={handleToggleView}
+              disabled={selecting}
+              activeOpacity={0.7}
+            >
+              <Feather name="refresh-cw" size={16} color="#4B5563" />
+              <Text style={styles.finishSecondaryText}>
+                {viewedFromInside ? 'Outside' : 'Inside'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.finishSecondaryBtn}
+              onPress={handleNewDoor}
+              activeOpacity={0.7}
+            >
+              <Feather name="plus-circle" size={16} color="#4B5563" />
+              <Text style={styles.finishSecondaryText}>New Door</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.enquiryButton}
+            onPress={() => { setEnquirySuccess(false); setShowEnquiry(true); }}
+            activeOpacity={0.85}
           >
-            <Feather name="send" size={18} color="#fff" style={{ marginRight: 10 }} />
-            <Text style={styles.enquiryButtonText}>Send Enquiry</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.newDoorButton} onPress={handleNewDoor}>
-          <Feather name="refresh-cw" size={16} color="#6B7280" style={{ marginRight: 8 }} />
-          <Text style={styles.newDoorButtonText}>Start New Door</Text>
-        </TouchableOpacity>
-      </ScrollView>
+            <LinearGradient
+              colors={['#e5040a', '#B80008']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.enquiryButtonGradient}
+            >
+              <Feather name="send" size={16} color="#fff" style={{ marginRight: 10 }} />
+              <Text style={styles.enquiryButtonText}>Send Enquiry</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
@@ -1394,8 +1574,8 @@ const Designer = () => {
             {renderDoorPreview()}
           </View>
 
-          {/* Step Indicator */}
-          {renderStepIndicator()}
+          {/* Step Indicator — hidden on finish step */}
+          {currentStep !== FINISH_STEP && renderStepIndicator()}
 
           {/* Options - Bottom section */}
           <View style={styles.optionsPanel}>
@@ -1770,42 +1950,66 @@ const styles = StyleSheet.create({
   },
 
   // Finish Panel
+  // ---- FINISH PAGE ----
   finishContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    flex: 1,
+  },
+  finishTabBar: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    padding: 3,
+  },
+  finishTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  finishTabActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  finishTabText: {
+    fontSize: 14,
+    fontFamily: 'RM',
+    color: '#9CA3AF',
+  },
+  finishTabTextActive: {
+    fontFamily: 'RB',
+    color: '#111',
+  },
+  finishScrollContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   summaryCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    marginBottom: 20,
-  },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  summaryTitle: {
-    fontSize: 17,
-    fontFamily: 'RB',
-    color: '#111',
-    marginLeft: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#F9FAFB',
+    borderBottomColor: '#F3F4F6',
   },
   summaryLabel: {
     fontSize: 14,
@@ -1816,30 +2020,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'RB',
     color: '#111',
-    maxWidth: '60%',
+    maxWidth: '55%',
     textAlign: 'right',
   },
 
-  // Hardware Section
-  hardwareSection: {
-    marginBottom: 20,
-  },
-  hardwareSectionTitle: {
-    fontSize: 16,
-    fontFamily: 'RB',
-    color: '#111',
-    marginBottom: 12,
-  },
+  // Hardware Tab
   hardwareGrid: {
-    flexDirection: 'row',
     gap: 10,
   },
   hardwareCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -1848,82 +2043,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F0F0F0',
   },
+  hardwareCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   hardwareIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: '#FEE2E2',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginRight: 12,
+  },
+  hardwareCardInfo: {
+    flex: 1,
   },
   hardwareLabel: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'RB',
     color: '#111',
-    marginBottom: 2,
   },
   hardwareCurrent: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'RM',
     color: '#6B7280',
-    textAlign: 'center',
+    marginTop: 2,
   },
 
-  // View Toggle Button
-  viewToggleButton: {
+  // Finish Action Bar
+  finishActions: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+  },
+  finishActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  finishSecondaryBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 12,
+    paddingVertical: 11,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 16,
+    gap: 6,
   },
-  viewToggleButtonText: {
-    fontSize: 15,
+  finishSecondaryText: {
+    fontSize: 14,
     fontFamily: 'RB',
     color: '#4B5563',
-    marginLeft: 10,
   },
-
-  // Enquiry Button
   enquiryButton: {
-    marginBottom: 12,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
     shadowColor: '#e5040a',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     elevation: 6,
   },
   enquiryButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
+    paddingVertical: 15,
+    borderRadius: 14,
   },
   enquiryButtonText: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: 'RB',
     color: '#fff',
-  },
-
-  // New Door Button
-  newDoorButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-  },
-  newDoorButtonText: {
-    fontSize: 15,
-    fontFamily: 'RM',
-    color: '#6B7280',
   },
 
   // Overlays & Badges
