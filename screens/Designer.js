@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
   ActivityIndicator, Image, Dimensions, Platform, TextInput, Modal,
-  KeyboardAvoidingView, Alert, LayoutAnimation, UIManager,
+  KeyboardAvoidingView, Alert, LayoutAnimation, UIManager, Animated,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,6 +40,69 @@ const LARGE_TILE_CATEGORIES = [
 // The finish/summary step comes after all wizard steps
 const FINISH_STEP = LOCAL_WIZARD_STEPS.length + 1; // 13
 
+const Skeleton = ({ width, height, style, borderRadius = 8 }) => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [animatedValue]);
+
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
+  return (
+    <Animated.View style={[{ width, height, borderRadius, backgroundColor: '#E5E7EB', opacity }, style]} />
+  );
+};
+
+// Wait for all images in a step to be cached before revealing
+const collectStepImageUrls = (stepId, jobData, localDataRef) => {
+  const urls = [];
+
+  const collectForCategory = (catId) => {
+    // From local Supabase data
+    if (localDataRef?.options?.[catId]) {
+      localDataRef.options[catId].forEach(opt => {
+        if (opt.image_url && !opt.valid_but_hidden) urls.push(opt.image_url);
+      });
+    }
+    // From API job headings
+    if (jobData?.Headings) {
+      const heading = jobData.Headings.find(h => h.HeadingTypeID === catId);
+      if (heading?.Options) {
+        heading.Options.forEach(opt => {
+          if (!opt.ValidButHidden) {
+            const url = opt.image_url || (opt.StoredImageID && opt.StoredImageID !== EMPTY_GUID_VALUE ? getStoredImageUrl(opt.StoredImageID, jobData.ImageLibraryVersion) : null);
+            if (url) urls.push(url);
+          }
+        });
+      }
+    }
+  };
+
+  const idx = stepId - 1;
+  if (idx >= 0 && idx < LOCAL_WIZARD_STEPS.length) {
+    collectForCategory(LOCAL_WIZARD_STEPS[idx].category);
+  }
+
+  return [...new Set(urls)];
+};
+
 const Designer = () => {
   // Core state
   const [job, setJob] = useState(null);
@@ -48,6 +111,8 @@ const Designer = () => {
   const [selecting, setSelecting] = useState(false);
   const [error, setError] = useState(null);
   const [sessionReady, setSessionReady] = useState(false);
+  const [previewRendering, setPreviewRendering] = useState(false);
+  const [stepReady, setStepReady] = useState(false);  // Gate: only show options when images loaded
 
   // Local Supabase data
   const [localData, setLocalData] = useState(null);  // { categories, options }
@@ -89,6 +154,35 @@ const Designer = () => {
       }
     })();
   }, []);
+
+  // Gate: wait for all images in the current step to be cached before revealing
+  useEffect(() => {
+    if (!localDataReady || !job) return;
+    
+    setStepReady(false);
+    const urls = collectStepImageUrls(currentStep, job, localData);
+    
+    if (urls.length === 0) {
+      // No images to load (e.g. finish step, text-only steps)
+      setStepReady(true);
+      return;
+    }
+
+    console.log(`[DoorDesigner] Waiting for ${urls.length} images on step ${currentStep}...`);
+    
+    // Load all images, then reveal
+    Promise.all(urls.map(url => Image.prefetch(url).catch(() => null)))
+      .then(() => {
+        console.log(`[DoorDesigner] Step ${currentStep} images ready!`);
+        setStepReady(true);
+        
+        // Also quietly start prefetching the NEXT step in the background
+        if (currentStep < LOCAL_WIZARD_STEPS.length) {
+          const nextUrls = collectStepImageUrls(currentStep + 1, job, localData);
+          nextUrls.forEach(url => Image.prefetch(url).catch(() => {}));
+        }
+      });
+  }, [currentStep, job, localDataReady, hardwareSection]);
 
   // When the hidden WebView loads the ASPX page, trigger StartDoor
   const handleSessionPageLoaded = () => {
@@ -163,6 +257,13 @@ const Designer = () => {
     setHardwareSection(null);
     setViewedFromInside(false);
     setError(null);
+    
+    // Prefetch next step images in background
+    const nextStepIdx = currentStep;
+    if (nextStepIdx < LOCAL_WIZARD_STEPS.length) {
+      const nextUrls = collectStepImageUrls(nextStepIdx + 1, data, localData);
+      nextUrls.forEach(url => Image.prefetch(url).catch(() => {}));
+    }
   };
 
   const handleUpdateOptionResult = (data) => {
@@ -182,6 +283,8 @@ const Designer = () => {
       setCurrentStep(nextStep);
       scrollToStep(nextStep);
     }
+    
+    // Step changed — stepReady will be handled by the useEffect
   };
 
   const handleToggleResult = (data) => {
@@ -211,6 +314,7 @@ const Designer = () => {
 
     // Also send to WebView bridge for SVG update
     setSelecting(true);
+    setPreviewRendering(true);
     const js = generateUpdateOptionJS(categoryId, optionId, dataLinkID);
     apiWebViewRef.current?.injectJavaScript(js);
   };
@@ -328,12 +432,10 @@ const Designer = () => {
     }
   };
 
-  // Toggle inside/outside view entirely natively!
-  // The backend API `ToggleViewPosition` wipes color and sidelight configs.
-  // Instead, we flip the graphic entirely natively in the front-end DOM.
   const handleToggleView = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setViewedFromInside(prev => !prev);
+    setSelecting(true);
+    const js = generateToggleViewJS();
+    apiWebViewRef.current?.injectJavaScript(js);
   };
 
   // Submit enquiry via WebView bridge
@@ -530,50 +632,66 @@ const Designer = () => {
 
           var isInside = ${viewedFromInside};
           if (isInside) {
-            // Parse SVG tree for known Hardware ID layers injected by the ASP.NET API
-            var knockersLayer = document.querySelector('[id*="Knocker"]') || document.querySelector('[id*="knocker"]');
-            var handlesLayer = document.querySelector('[id*="Handle"]') || document.querySelector('[id*="handle"]');
-            
-            // Mirror the ENTIRE door framework to simulate the inside opposite angle (hinges swap sides)
-            var container = document.getElementById('container');
-            if (container) {
-              container.style.transform = 'scaleX(-1)';
-            }
+            function hideKnockers() {
+              // Method 1: Hide any SVG group/element explicitly named knocker
+              var namedKnockers = document.querySelectorAll('[id*="knocker" i], [id*="Knocker" i], [id*="KNOCKER" i]');
+              namedKnockers.forEach(function(node) {
+                node.style.display = 'none';
+              });
 
-            // Detect hardware layers geometrically to avoid GUID string collisions that wipe colours
-            var images = document.querySelectorAll('image');
-            images.forEach(function(img) {
-              try {
-                var width = parseFloat(img.getAttribute('width') || 0);
-                var height = parseFloat(img.getAttribute('height') || 0);
-                var x = parseFloat(img.getAttribute('x') || 0);
-                var y = parseFloat(img.getAttribute('y') || 0);
-                var cx = x + (width/2);
-                var cy = y + (height/2);
-                var ratio = width / height;
-
-                // Typically, door canvas is ~906x2000. 
-                // Handles are small, thin, and positioned vertically near middle-center, but horizontally to the edge
-                // Knockers are small, central horizontally, and high vertically.
-                var isSmall = (width * height) < 200000; // Less than 10% of door area
-                var isHigh = cy < 1100;
-                var isCenter = cx > 300 && cx < 600;
-                var isEdge = cx < 300 || cx > 600;
-
-                if (isSmall) {
-                  if (isHigh && isCenter) {
-                    // This is highly likely the Knocker or Letterplate (if centrally aligned and high up)
-                    if (cy < 800) {
-                      img.style.display = 'none'; // Hide Knocker
-                    }
-                  } else if (isEdge && height > 50 && width < 300) {
-                    // This is highly likely the Lever Handle (on the edge, tall and thin)
-                    img.style.transformOrigin = cx + 'px center';
-                    img.style.transform = 'scaleX(-1)';
+              // Method 2: Match knocker by its actual stored image URL from the API data
+              var knockerImageId = '${(() => {
+                if (!job?.Headings) return '';
+                const knockerHeading = job.Headings.find(h => h.HeadingTypeID === 19); // OptionCategories.HardwareKnocker
+                if (!knockerHeading || !knockerHeading.OptionSelectedID || knockerHeading.OptionSelectedID === EMPTY_GUID_VALUE) return '';
+                const selectedOpt = knockerHeading.Options?.find(o => o.ID === knockerHeading.OptionSelectedID);
+                if (!selectedOpt?.StoredImageID || selectedOpt.StoredImageID === EMPTY_GUID_VALUE) return '';
+                return selectedOpt.StoredImageID;
+              })()}';
+              
+              if (knockerImageId) {
+                var images = document.querySelectorAll('image');
+                images.forEach(function(img) {
+                  var href = img.getAttribute('href') || img.getAttribute('xlink:href') || '';
+                  if (href.indexOf(knockerImageId) !== -1) {
+                    img.style.display = 'none';
                   }
-                }
-              } catch(e) {}
-            });
+                });
+              }
+
+              // Method 3: Geometric fallback — hide small images positioned in the upper-center of the door
+              var images = document.querySelectorAll('image');
+              var svgEl = document.querySelector('svg');
+              var vb = svgEl ? svgEl.getAttribute('viewBox') : null;
+              var canvasW = 906, canvasH = 2000;
+              if (vb) {
+                var parts = vb.split(/\\s+/);
+                if (parts.length === 4) { canvasW = parseFloat(parts[2]); canvasH = parseFloat(parts[3]); }
+              }
+              
+              images.forEach(function(img) {
+                try {
+                  var w = parseFloat(img.getAttribute('width') || 0);
+                  var h = parseFloat(img.getAttribute('height') || 0);
+                  var x = parseFloat(img.getAttribute('x') || 0);
+                  var y = parseFloat(img.getAttribute('y') || 0);
+                  var cx = x + (w/2);
+                  var cy = y + (h/2);
+                  var area = w * h;
+                  var doorArea = canvasW * canvasH;
+
+                  // Knockers: small (<5% door area), horizontally centered (middle third), upper half
+                  if (area < doorArea * 0.05 && cx > canvasW * 0.3 && cx < canvasW * 0.7 && cy < canvasH * 0.45) {
+                    img.style.display = 'none';
+                  }
+                } catch(e) {}
+              });
+            }
+            
+            // Run immediately and after images have loaded
+            hideKnockers();
+            setTimeout(hideKnockers, 500);
+            setTimeout(hideKnockers, 1200);
           }
 
           // Force preserveAspectRatio for proper scaling
@@ -596,7 +714,10 @@ const Designer = () => {
           // Try immediately and after a delay for images
           crop();
           setTimeout(crop, 300);
-          setTimeout(crop, 1000);
+          setTimeout(function() {
+            crop();
+            window.ReactNativeWebView.postMessage('PREVIEW_RENDERED');
+          }, 1000);
         })();
       </script>
       </html>
@@ -613,6 +734,11 @@ const Designer = () => {
           showsHorizontalScrollIndicator={false}
           javaScriptEnabled={true}
           originWhitelist={['*']}
+          onMessage={(event) => {
+            if (event.nativeEvent.data === 'PREVIEW_RENDERED') {
+              setPreviewRendering(false);
+            }
+          }}
         />
 
         {/* View toggle badge */}
@@ -722,6 +848,27 @@ const Designer = () => {
       return (
         <View style={styles.emptyOptions}>
           <Text style={styles.emptyOptionsText}>No options available for this step.</Text>
+        </View>
+      );
+    }
+
+    // Gate: show skeleton tiles until all images for this step are cached
+    if (!stepReady && currentStep !== FINISH_STEP) {
+      return (
+        <View style={styles.optionsSection}>
+          <View style={styles.optionsSectionHeader}>
+            <Skeleton width={140} height={20} borderRadius={4} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stylesCarousel}>
+            {[1, 2, 3, 4].map(i => (
+              <View key={i} style={[styles.styleCard, { opacity: 1 }]}>  
+                <View style={styles.styleCardImageWrap}>
+                  <Skeleton width="100%" height="100%" borderRadius={12} />
+                </View>
+                <Skeleton width={80} height={14} borderRadius={4} style={{ marginTop: 8 }} />
+              </View>
+            ))}
+          </ScrollView>
         </View>
       );
     }
@@ -1174,6 +1321,49 @@ const Designer = () => {
 
   // -- MAIN RENDER --
 
+  if ((loading && !localDataReady) || (localDataReady && !job && !error)) {
+    return (
+      <View style={styles.container}>
+        <View style={{ width: 0, height: 0, overflow: 'hidden', position: 'absolute' }}>
+          <WebView
+            ref={apiWebViewRef}
+            source={{ uri: SESSION_PAGE_URL }}
+            style={{ width: 0, height: 0, opacity: 0 }}
+            onLoadEnd={handleSessionPageLoaded}
+            onMessage={handleApiMessage}
+            javaScriptEnabled={true}
+            thirdPartyCookiesEnabled={true}
+            sharedCookiesEnabled={true}
+          />
+        </View>
+        <View style={styles.previewSection}>
+          <View style={styles.previewContainer}>
+            <Skeleton width="55%" height="90%" style={{ alignSelf: 'center', marginTop: 'auto', marginBottom: 0 }} borderRadius={16} />
+          </View>
+        </View>
+        <View style={[styles.stepsContainer, { paddingHorizontal: 20, paddingTop: 20 }]}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} width={i === 1 ? 100 : i === 2 ? 80 : 120} height={36} borderRadius={20} />
+            ))}
+          </View>
+        </View>
+        <View style={styles.optionsPanel}>
+          <View style={[styles.optionsSectionHeader, { marginTop: 16 }]}>
+            <Skeleton width={140} height={20} borderRadius={4} />
+          </View>
+          <View style={[styles.optionsGrid, { marginTop: 10 }]}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <View key={i} style={{ width: TILE_WIDTH, height: TILE_WIDTH }}>
+                <Skeleton width="100%" height="100%" borderRadius={16} />
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Hidden WebView: loads the ASPX page to establish session, then handles all API calls */}
@@ -1190,23 +1380,15 @@ const Designer = () => {
         />
       </View>
 
-      {/* Loading overlay - only show full overlay if local data not ready */}
-      {(loading && !localDataReady) && (
-        <View style={[styles.selectingOverlay, styles.fullOverlay]}>
-          <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.overlayText}>Loading Door Designer...</Text>
-        </View>
-      )}
-
-      {/* Selecting indicator (subtle) */}
+      {/* Selecting indicator (subtle right badge) */}
       {selecting && (
-        <View style={styles.selectingOverlay}>
-          <ActivityIndicator size="small" color="#fff" />
+        <View style={styles.selectingIndicatorBadge}>
+          <ActivityIndicator size="small" color="#e5040a" />
         </View>
       )}
 
-      {localDataReady && (
-        <View style={{ flex: 1, width: '100%' }}>
+      {localDataReady && job && (
+        <View style={{ flex: 1, width: '100%' }} pointerEvents={selecting ? 'none' : 'auto'}>
           {/* Door Preview - Top section */}
           <View style={styles.previewSection}>
             {renderDoorPreview()}
@@ -1744,28 +1926,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
 
-  // Overlays
-  selectingOverlay: {
+  // Overlays & Badges
+  selectingIndicatorBadge: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
     zIndex: 100,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  fullOverlay: {
-    bottom: 0,
-    justifyContent: 'center',
-    paddingVertical: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  overlayText: {
-    fontSize: 16,
-    fontFamily: 'RB',
-    color: '#fff',
-    marginTop: 16,
   },
 
   // Modal
