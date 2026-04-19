@@ -133,6 +133,7 @@ export const CATEGORIES = [
           }
         ],
         galleryAlbumName: "uPVC Windows",
+        brochureTitles: ["uPVC Modern Windows", "Colour Guide"],
       },
       {
         id: "flush-casements",
@@ -258,6 +259,7 @@ export const CATEGORIES = [
           }
         ],
         galleryAlbumName: "Heritage Windows and Doors - Residence (R7 & R9) & VEKA Flush Sash",
+        brochureTitles: ["uPVC Heritage Windows", "Colour Guide"],
       },
       {
         id: "residence",
@@ -356,6 +358,7 @@ export const CATEGORIES = [
               }
             ],
             galleryAlbumName: "Heritage Windows and Doors - Residence (R7 & R9) & VEKA Flush Sash",
+            brochureTitles: ["R7 Brochure", "Residence Colours"],
           },
           {
             id: "r9",
@@ -449,6 +452,7 @@ export const CATEGORIES = [
               }
             ],
             galleryAlbumName: "Heritage Windows and Doors - Residence (R7 & R9) & VEKA Flush Sash",
+            brochureTitles: ["R9 Brochure", "Residence Colours"],
           }
         ]
       },
@@ -543,7 +547,8 @@ export const CATEGORIES = [
             content: "Integral blinds offer a sleek and practical solution for controlling light and privacy, all while maintaining a clean and modern look. Sealed between the panes of a double-glazed unit, they stay dust-free and protected from damage."
           }
         ],
-        galleryAlbumName: "Aluminium Windows"
+        galleryAlbumName: "Aluminium Windows",
+        brochureTitles: ["Aluminium Range", "Aluminium Collection"]
       }
     ]
   },
@@ -752,6 +757,7 @@ export const CATEGORIES = [
           }
         ],
         galleryAlbumName: "uPVC Single Doors, French Doors & Patio Doors",
+        brochureTitles: ["Essentials Doors", "Colour Guide"],
         subcategories: []
       },
       {
@@ -935,7 +941,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "gemstone-collection",
@@ -1126,7 +1133,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "galaxy-collection",
@@ -1302,7 +1310,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "highline-range",
@@ -1391,7 +1400,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Highline Range"]
           },
           {
             id: "elements-collection",
@@ -1568,7 +1578,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "elegance-collection",
@@ -1757,7 +1768,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "stable-doors",
@@ -1945,7 +1957,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "double-doors",
@@ -2073,7 +2086,8 @@ export const CATEGORIES = [
               }
             ],
             glass: [],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           },
           {
             id: "inox-collection",
@@ -2201,7 +2215,8 @@ export const CATEGORIES = [
                 ]
               }
             ],
-            galleryAlbumName: "Composite Doors"
+            galleryAlbumName: "Composite Doors",
+            brochureTitles: ["Entrance Doors"]
           }
         ]
       },
@@ -2270,7 +2285,8 @@ export const CATEGORIES = [
             ]
           }
         ],
-        galleryAlbumName: "Aluminium Bi-fold Doors"
+        galleryAlbumName: "Aluminium Bi-fold Doors",
+        brochureTitles: ["BSW Brochure"]
       }
     ]
   },
@@ -2426,7 +2442,8 @@ export const CATEGORIES = [
         ],
         colours: [],
         extras: [],
-        galleryAlbumName: "Conservatories & Conservatory Roofs"
+        galleryAlbumName: "Conservatories & Conservatory Roofs",
+        brochureTitles: ["Conservatories"]
       },
       {
         id: "roof-lanterns-sub",
@@ -2481,7 +2498,8 @@ export const CATEGORIES = [
             ]
           }
         ],
-        galleryAlbumName: "Aluminium Lanterns & Flat Rooflights"
+        galleryAlbumName: "Aluminium Lanterns & Flat Rooflights",
+        brochureTitles: ["Lanterns", "Flat Rooflight"]
       },
       {
         id: "skyrooms-sub",
@@ -2538,7 +2556,8 @@ export const CATEGORIES = [
           }
         ],
         extras: [],
-        galleryAlbumName: "Skyrooms"
+        galleryAlbumName: "Skyrooms",
+        brochureTitles: ["Skyrooms"]
       },
       {
         id: "tiled-roofs",
@@ -2609,7 +2628,8 @@ export const CATEGORIES = [
           }
         ],
         extras: [],
-        galleryAlbumName: "Warm/Tiled Roof"
+        galleryAlbumName: "Warm/Tiled Roof",
+        brochureTitles: ["Conservatories"]
       }
     ]
   },
@@ -2669,6 +2689,7 @@ export const CATEGORIES = [
       }
     ],
     extras: [],
-    galleryAlbumName: "Skyrooms"
+    galleryAlbumName: "Skyrooms",
+    brochureTitles: ["Skyrooms"]
   }
 ];

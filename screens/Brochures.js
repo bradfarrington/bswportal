@@ -10,7 +10,8 @@ import {
   Alert,
   TextInput,
   ScrollView,
-  ImageBackground
+  ImageBackground,
+  useWindowDimensions
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign, Ionicons, FontAwesome5 } from "@expo/vector-icons";
@@ -51,6 +52,15 @@ const Brochures = () => {
   const [activeSlide, setActiveSlide] = useState(0);
 
   const { navigate } = useNavigation();
+
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTabletDynamic = windowWidth >= 768;
+  const isLandscape = windowWidth > windowHeight;
+
+  const POPULAR_CARD_WIDTH = isTabletDynamic ? 450 : windowWidth - 40;
+  const BROCHURE_CARD_WIDTH = isTabletDynamic ? (isLandscape ? 220 : 200) : windowWidth * 0.34;
+  const BROCHURE_CARD_HEIGHT = isTabletDynamic ? (isLandscape ? 280 : 250) : 190;
+  const MAIN_LIST_HEIGHT = isTabletDynamic ? (isLandscape ? 360 : 330) : 260;
 
   const activeCategories = useMemo(() => {
     const active = new Set(["All"]);
@@ -175,7 +185,7 @@ const Brochures = () => {
   const carouselData = popularData.length > 0 ? popularData.slice(0, 3) : BrochureData.slice(0, 3);
 
   const handleScroll = (event) => {
-    const slideSize = width;
+    const slideSize = POPULAR_CARD_WIDTH + 40;
     const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
     if (index !== activeSlide) setActiveSlide(index);
   };
@@ -183,7 +193,7 @@ const Brochures = () => {
   const renderItemBrochure = ({ item }) => {
     const isLoading = progress === item.filename;
     return (
-      <View style={style.cardContainer}>
+      <View style={[style.cardContainer, { width: BROCHURE_CARD_WIDTH }]}>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => handleOpenBrochure(item)}
@@ -191,7 +201,7 @@ const Brochures = () => {
         >
           <View style={style.cardBox}>
             <Image
-              style={style.image}
+              style={[style.image, { height: BROCHURE_CARD_HEIGHT }]}
               resizeMode="cover"
               source={{ uri: item.image }}
             />
@@ -263,7 +273,9 @@ const Brochures = () => {
           <View style={style.heroWrapper}>
               <ScrollView 
                  horizontal 
-                 pagingEnabled 
+                 pagingEnabled={!isTabletDynamic}
+                 snapToInterval={isTabletDynamic ? POPULAR_CARD_WIDTH + 40 : undefined}
+                 snapToAlignment="start"
                  showsHorizontalScrollIndicator={false}
                  onScroll={handleScroll}
                  scrollEventThrottle={16}
@@ -277,7 +289,7 @@ const Brochures = () => {
                       >
                          <ImageBackground
                              source={require('../assets/doors/composite-doors/deisnger-bg-image.png')}
-                             style={style.heroCard}
+                             style={[style.heroCard, { width: POPULAR_CARD_WIDTH }]}
                              imageStyle={{ borderRadius: 20 }}
                          >
                           <View style={style.heroContent}>
@@ -345,7 +357,7 @@ const Brochures = () => {
           </View>
 
           {/* Main Horizontal List */}
-          <View style={style.mainListWrapper}>
+          <View style={[style.mainListWrapper, { height: MAIN_LIST_HEIGHT }]}>
           {!loading ? (
             filteredData.length > 0 ? (
               <FlatList

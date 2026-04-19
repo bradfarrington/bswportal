@@ -32,7 +32,10 @@ import VisualiserResultScreen from "../screens/VisualiserResultScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const TopTabs = createMaterialTopTabNavigator();
-import { View, Platform, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Platform, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
+
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
 
 const TAB_CONFIG = [
   { name: 'Dashboard', label: 'Home', isCustomIcon: true, iconSource: require('../assets/tabicon.png'), iconSize: 24 },
@@ -111,8 +114,10 @@ const tabBarStyles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 10,
-    left: 15,
-    right: 15,
+    left: isTablet ? undefined : 15,
+    right: isTablet ? undefined : 15,
+    alignSelf: isTablet ? 'center' : undefined,
+    width: isTablet ? 600 : undefined,
   },
   pill: {
     flexDirection: 'row',

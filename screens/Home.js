@@ -4,8 +4,10 @@ import { useNavigation } from "@react-navigation/native";
 import { supabase } from "../config/supabaseClient";
 import { registerForPushNotificationsAsync } from "../components/pushNotifications";
 import { LinearGradient } from "expo-linear-gradient";
+import { tabletLogo } from "../assets";
 
 const { height, width } = Dimensions.get("window");
+const isTablet = width >= 768;
 
 const Home = () => {
   const navigation = useNavigation();
@@ -57,18 +59,32 @@ const Home = () => {
 
       {/* Bottom Content Container */}
       <View style={styles.bottomContainer}>
-        <Text style={styles.titleText}>
-          Services You{"\n"}
-          <Text style={styles.titleTextBold}>Can Trust!</Text>
-        </Text>
-        
-        <TouchableOpacity
-          style={styles.buttonStyle}
-          onPress={() => addTokenToSupabase()}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonTitle}>Get Started</Text>
-        </TouchableOpacity>
+        <View style={isTablet ? styles.contentWrapTablet : styles.contentWrap}>
+          {isTablet && (
+            <View style={styles.leftLogoTablet}>
+              <Image 
+                source={tabletLogo} 
+                style={styles.logoTablet} 
+                resizeMode="contain" 
+              />
+            </View>
+          )}
+
+          <View style={isTablet ? styles.rightTextContentTablet : styles.fullContent}>
+            <Text style={isTablet ? styles.titleTextTablet : styles.titleText}>
+              Services You{"\n"}
+              <Text style={styles.titleTextBold}>Can Trust!</Text>
+            </Text>
+            
+            <TouchableOpacity
+              style={isTablet ? styles.buttonStyleTablet : styles.buttonStyle}
+              onPress={() => addTokenToSupabase()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonTitle}>Get Started</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -103,9 +119,38 @@ const styles = StyleSheet.create({
   bottomContainer: {
     flex: 1,
     justifyContent: "flex-end",
+    alignItems: "center",
     paddingHorizontal: 30,
     paddingBottom: 50,
     backgroundColor: 'transparent',
+  },
+  contentWrap: {
+    width: "100%",
+    maxWidth: 500,
+  },
+  contentWrapTablet: {
+    width: "100%",
+    maxWidth: 900,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  rightTextContentTablet: {
+    flex: 1,
+    alignItems: "flex-start",
+    paddingLeft: 20,
+  },
+  fullContent: {
+    width: "100%",
+  },
+  leftLogoTablet: {
+    flex: 1,
+    alignItems: "flex-start",
+  },
+  logoTablet: {
+    width: 450,
+    height: 220,
+    marginBottom: 10,
   },
   titleText: {
     fontSize: 34,
@@ -114,12 +159,33 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     lineHeight: 45,
   },
+  titleTextTablet: {
+    fontSize: 42,
+    fontFamily: "RM",
+    color: "#666",
+    marginBottom: 30,
+    lineHeight: 52,
+    textAlign: "left",
+  },
   titleTextBold: {
     fontFamily: "RB",
     color: "#111",
   },
   buttonStyle: {
     width: "100%",
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "red", 
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "red",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  buttonStyleTablet: {
+    width: 250,
     height: 60,
     borderRadius: 30,
     backgroundColor: "red", 

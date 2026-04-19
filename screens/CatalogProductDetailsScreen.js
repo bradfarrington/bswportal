@@ -8,7 +8,9 @@ import {
   TouchableOpacity, 
   Platform,
   Modal,
-  Dimensions 
+  Dimensions,
+  useWindowDimensions,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Feather, AntDesign } from '@expo/vector-icons';
@@ -16,14 +18,18 @@ import axios from 'axios';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
 import { LinearGradient } from 'expo-linear-gradient';
+import { supabase } from '../config/supabaseClient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TABS_DEFAULT = ['Overview', 'Details', 'Styles', 'Glass', 'Colours', 'Hardware', 'Extras'];
-const TABS_COMPOSITE = ['Overview', 'Details', 'Styles', 'Colours', 'Glass', 'Hardware', 'Extras'];
+const TABS_DEFAULT = ['Overview', 'Details', 'Styles', 'Glass', 'Colours', 'Hardware', 'Extras', 'Brochure'];
+const TABS_COMPOSITE = ['Overview', 'Details', 'Styles', 'Colours', 'Glass', 'Hardware', 'Extras', 'Brochure'];
 
 export default function CatalogProductDetailsScreen({ route, navigation }) {
   const { product } = route.params;
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const isLandscape = width > height;
 
   const isCompositeDoor = [
     'composite-doors', 
@@ -38,12 +44,70 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
     'inox-collection'
   ].includes(product.id);
 
+  const isWindowProduct = [
+    'windows',
+    'casements',
+    'flush-casements',
+    'residence',
+    'r7',
+    'r9',
+    'aluminium'
+  ].includes(product.id);
+
+  const isLanternProduct = [
+    'roof-lanterns',
+    'roof-lanterns-sub'
+  ].includes(product.id);
+
   const [activeTab, setActiveTab] = useState('Overview');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(isTablet);
   const scrollViewRef = useRef(null);
   const [viewerImages, setViewerImages] = useState([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [isViewerVisible, setIsViewerVisible] = useState(false);
+  const [brochures, setBrochures] = useState([]);
+  const [brochuresLoading, setBrochuresLoading] = useState(false);
+
+  // Stateful carousel component to track pagination
+  const CarouselWidget = ({ images }) => {
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const handleScroll = (event) => {
+      const scrollPosition = event.nativeEvent.contentOffset.x;
+      const itemWidth = (isLanternProduct && isTablet) ? ((width * (isLandscape ? 0.64 : 0.58)) - 110) : 220;
+      const margin = 20;
+      const index = Math.round(scrollPosition / (itemWidth + margin));
+      setActiveIndex(index);
+    };
+
+    return (
+      <View>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.carouselContainer}
+          snapToInterval={(isLanternProduct && isTablet) ? ((width * (isLandscape ? 0.64 : 0.58)) - 90) : 240}
+          decelerationRate="fast"
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {images.map((img, i) => (
+            <TouchableOpacity key={i} style={[styles.carouselItem, isLanternProduct && isTablet && { width: (width * (isLandscape ? 0.64 : 0.58)) - 110 }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+              <Image source={img.image} style={[styles.carouselImage, isLanternProduct && { height: isTablet ? 240 : 120 }]} resizeMode="contain" />
+              <Text style={styles.carouselLabel}>{img.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        {isLanternProduct && isTablet && images.length > 1 && (
+          <View style={styles.paginationContainer}>
+            {images.map((_, i) => (
+              <View key={i} style={[styles.paginationDot, i === activeIndex && styles.paginationDotActive]} />
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryAlbumId, setGalleryAlbumId] = useState(null);
   const [galleryAlbumTitle, setGalleryAlbumTitle] = useState('');
@@ -124,9 +188,29 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
     fetchGallery();
   }, [product.galleryAlbumName]);
 
+  // Fetch matching brochures from Supabase
+  useEffect(() => {
+    if (!product.brochureTitles?.length) return;
+    const fetchBrochures = async () => {
+      setBrochuresLoading(true);
+      try {
+        const { data } = await supabase
+          .from('brochures')
+          .select('*')
+          .in('title', product.brochureTitles);
+        if (data) setBrochures(data);
+      } catch (e) {
+        console.error('Brochure fetch error:', e);
+      }
+      setBrochuresLoading(false);
+    };
+    fetchBrochures();
+  }, [product.brochureTitles]);
+
   const renderTabs = () => {
     const currentTabs = isCompositeDoor ? TABS_COMPOSITE : TABS_DEFAULT;
     const availableTabs = currentTabs.filter(tab => {
+      if (tab === 'Brochure') return product.brochureTitles?.length > 0;
       if (tab === 'Extras') return product.extras && product.extras.length > 0;
       if (tab === 'Colours') return product.colours && product.colours.length > 0;
       if (tab === 'Glass') return product.glass && product.glass.length > 0;
@@ -164,26 +248,28 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
 
   const renderOverview = () => (
     <View style={styles.overviewSection}>
-      {/* Hero Image */}
-      <Image 
-        source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} 
-        style={[
-          styles.heroImage,
-          ([
-            'upvc-doors', 
-            'composite-doors', 
-            'edge-collection', 
-            'gemstone-collection', 
-            'galaxy-collection', 
-            'highline-range', 
-            'elements-collection', 
-            'elegance-collection', 
-            'stable-doors', 
-            'double-doors', 
-            'inox-collection'
-          ].includes(product.id)) && { height: 420 }
-        ]} 
-      />
+      {/* Hero Image - ONLY rendered here if Mobile. On Tablet, it's sticky on left pane */}
+      {!isTablet && (
+        <Image 
+          source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} 
+          style={[
+            styles.heroImage,
+            ([
+              'upvc-doors', 
+              'composite-doors', 
+              'edge-collection', 
+              'gemstone-collection', 
+              'galaxy-collection', 
+              'highline-range', 
+              'elements-collection', 
+              'elegance-collection', 
+              'stable-doors', 
+              'double-doors', 
+              'inox-collection'
+            ].includes(product.id)) && { height: 420 }
+          ]} 
+        />
+      )}
 
       {/* Trust Badge Row */}
       <View style={styles.trustBadgeRow}>
@@ -210,46 +296,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
       </View>
 
       {/* Design Your Dream Door Card (for composite doors) */}
-      {isCompositeDoor && (
-        <View style={styles.promoWrapper}>
-          <TouchableOpacity 
-            style={[styles.designerPromoContainer, { marginHorizontal: 0, marginTop: 10, marginBottom: 30 }]}
-            onPress={() => navigation.navigate('Designer')}
-            activeOpacity={0.9}
-          >
-            <View style={styles.designerPromoInner}>
-              <Image
-                source={require('../assets/doors/composite-doors/deisnger-bg-image.png')}
-                style={styles.designerPromoBackground}
-                resizeMode="cover"
-              />
-              <View style={styles.designerPromoLeftContent}>
-                <Text style={styles.designerPromoTitle}>Design Your{'\n'}Dream Door</Text>
-                <Text style={styles.designerPromoDescription}>
-                  Create your perfect{'\n'}custom door in minutes.
-                </Text>
-                <View style={styles.designerPromoButtonWrapper}>
-                  <View style={styles.designerPromoButtonGlow} />
-                  <LinearGradient
-                    colors={['#3A0006', '#1A0003']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.designerPromoButton}
-                  >
-                    <Text style={styles.designerPromoButtonText}>Start Designing</Text>
-                    <Feather name="chevron-right" size={16} color="#fff" style={{marginLeft: 2, marginTop: 1}} />
-                  </LinearGradient>
-                </View>
-              </View>
-              <Image 
-                source={require('../assets/doors/composite-doors/exploded-door.png')} 
-                style={styles.designerPromoImage} 
-                resizeMode="contain" 
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
-      )}
+      {isCompositeDoor && !isTablet && renderDesignerPromo()}
 
       {/* Gallery Section */}
       {galleryPhotos.length > 0 && (
@@ -305,8 +352,8 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {detail.images && detail.images.length > 0 && (
             <View style={styles.imageGrid}>
               {detail.images.map((img, i) => (
-                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
                     <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
@@ -316,14 +363,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           )}
           {/* Carousel images */}
           {detail.carouselImages && detail.carouselImages.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
-              {detail.carouselImages.map((img, i) => (
-                <TouchableOpacity key={i} style={styles.carouselItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <Image source={img.image} style={styles.carouselImage} resizeMode="cover" />
-                  <Text style={styles.carouselLabel}>{img.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <CarouselWidget images={detail.carouselImages} />
           )}
         </View>
       ))}
@@ -345,7 +385,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {colourGroup.swatches && colourGroup.swatches.length > 0 && (
             <View style={styles.swatchGrid}>
               {colourGroup.swatches.map((swatch, i) => (
-                <TouchableOpacity key={i} style={styles.swatchItem} activeOpacity={0.8} onPress={() => openImage(swatch.image, swatch.label)}>
+                <TouchableOpacity key={i} style={[styles.swatchItem, isTablet && { width: isLandscape ? '15%' : '22%' }]} activeOpacity={0.8} onPress={() => openImage(swatch.image, swatch.label)}>
                   <View style={styles.swatchImageWrapper}>
                     <Image source={swatch.image} style={styles.swatchImage} resizeMode="cover" />
                   </View>
@@ -374,8 +414,8 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {glassOption.images && glassOption.images.length > 0 && (
             <View style={styles.imageGrid}>
               {glassOption.images.map((img, i) => (
-                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
                     <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
@@ -408,8 +448,8 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {styleGroup.images && styleGroup.images.length > 0 && (
             <View style={styles.imageGrid}>
               {styleGroup.images.map((img, i) => (
-                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
                     <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
@@ -418,14 +458,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
             </View>
           )}
           {styleGroup.carouselImages && styleGroup.carouselImages.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
-              {styleGroup.carouselImages.map((img, i) => (
-                <TouchableOpacity key={i} style={styles.carouselItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <Image source={img.image} style={styles.carouselImage} resizeMode="contain" />
-                  <Text style={styles.carouselLabel}>{img.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <CarouselWidget images={styleGroup.carouselImages} />
           )}
         </View>
       ))}
@@ -442,8 +475,8 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {hardwareGroup.images && hardwareGroup.images.length > 0 && (
             <View style={styles.imageGrid}>
               {hardwareGroup.images.map((img, i) => (
-                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
                     <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
@@ -459,20 +492,70 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
 
   const renderExtras = () => (
     <View style={styles.detailsSection}>
-      {product.extras?.map((extra, index) => (
-        <View key={index} style={styles.detailCard}>
-          <Text style={styles.detailTitle}>{extra.title}</Text>
-          {extra.image && (
-            <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(extra.image, extra.title)}>
-              <Image source={extra.image} style={styles.extraImage} resizeMode="cover" />
-            </TouchableOpacity>
-          )}
-          <Text style={styles.detailContent}>{extra.content}</Text>
-        </View>
-      ))}
+      <View style={isLandscape ? { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' } : null}>
+        {product.extras?.map((extra, index) => (
+          <View key={index} style={[styles.detailCard, isLandscape && { width: '48%' }]}>
+            <Text style={styles.detailTitle}>{extra.title}</Text>
+            {extra.image && (
+              <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(extra.image, extra.title)}>
+                <Image source={extra.image} style={styles.extraImage} resizeMode="cover" />
+              </TouchableOpacity>
+            )}
+            <Text style={styles.detailContent}>{extra.content}</Text>
+          </View>
+        ))}
+      </View>
       {(!product.extras || product.extras.length === 0) && (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateText}>No extras available.</Text>
+        </View>
+      )}
+      <View style={{ height: 100 }} />
+    </View>
+  );
+  const renderBrochure = () => (
+    <View style={styles.detailsSection}>
+      {brochuresLoading ? (
+        <View style={styles.brochureLoadingContainer}>
+          <ActivityIndicator size="large" color="#E5040A" />
+        </View>
+      ) : brochures.length > 0 ? (
+        <View style={brochures.length > 1 && (!isTablet || isLandscape) ? styles.brochureGrid : null}>
+          {brochures.map((brochure, index) => (
+            <TouchableOpacity
+              key={brochure.id || index}
+              style={[styles.brochureCard, brochures.length > 1 && (!isTablet || isLandscape) && styles.brochureCardHalf]}
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('PDfViewer', { url: brochure.link })}
+            >
+              {/* Brochure Cover Image */}
+              <View style={[styles.brochureCoverWrapper, isTablet && styles.brochureCoverWrapperTablet]}>
+                <Image
+                  source={{ uri: brochure.image }}
+                  style={styles.brochureCoverImage}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.6)']}
+                  style={styles.brochureCoverGradient}
+                />
+              </View>
+
+              {/* Brochure Info — stacked vertically */}
+              <View style={styles.brochureInfoColumn}>
+                <Text style={styles.brochureCardTitle} numberOfLines={2}>{brochure.title}</Text>
+                <Text style={styles.brochureCardCategory}>{brochure.category || 'Brochure'}</Text>
+                <View style={styles.brochureViewBtn}>
+                  <Feather name="book-open" size={14} color="#fff" />
+                  <Text style={styles.brochureViewBtnText}>View Brochure</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateText}>No brochures available.</Text>
         </View>
       )}
       <View style={{ height: 100 }} />
@@ -495,96 +578,232 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
         return renderGlass();
       case 'Extras':
         return renderExtras();
+      case 'Brochure':
+        return renderBrochure();
       default:
         return renderOverview();
     }
   };
 
+  const renderLightbox = () => (
+    <Modal
+      visible={isViewerVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setIsViewerVisible(false)}
+    >
+      <ImageViewer
+        imageUrls={viewerImages}
+        index={viewerIndex}
+        enableSwipeDown={true}
+        onCancel={() => setIsViewerVisible(false)}
+        onSwipeDown={() => setIsViewerVisible(false)}
+        saveToLocalByLongPress={false}
+        backgroundColor="rgba(0,0,0,0.95)"
+        renderIndicator={(currentIndex, allSize) => {
+          if (allSize <= 1) return null;
+          return (
+            <View style={styles.indicator}>
+              <Text style={styles.indicatorText}>
+                {currentIndex} / {allSize}
+              </Text>
+            </View>
+          );
+        }}
+        renderHeader={() => (
+          <TouchableOpacity
+            onPress={() => setIsViewerVisible(false)}
+            style={styles.closeButton}
+          >
+            <AntDesign name="close" size={22} color="#fff" />
+          </TouchableOpacity>
+        )}
+      />
+    </Modal>
+  );
+
+  const renderDesignerPromo = () => (
+    <View style={styles.promoWrapper}>
+      <TouchableOpacity 
+        style={[styles.designerPromoContainer, { marginHorizontal: 0, marginTop: (isTablet && !isLandscape) ? 30 : 10, marginBottom: 20, height: isTablet ? 200 : 220 }]}
+        onPress={() => navigation.navigate('Designer')}
+        activeOpacity={0.9}
+      >
+        <View style={styles.designerPromoInner}>
+          <Image
+            source={require('../assets/doors/composite-doors/deisnger-bg-image.png')}
+            style={styles.designerPromoBackground}
+            resizeMode="cover"
+          />
+          <View style={styles.designerPromoLeftContent}>
+            <Text style={[styles.designerPromoTitle, isTablet && { fontSize: 21, lineHeight: 26, marginTop: 10 }]}>Design Your{'\n'}Dream Door</Text>
+            <Text style={[styles.designerPromoDescription, isTablet && { fontSize: 13, lineHeight: 18, marginBottom: 16 }]}>
+              Create your perfect{'\n'}custom door in minutes.
+            </Text>
+            <View style={[styles.designerPromoButtonWrapper, isTablet && { marginTop: 0 }]}>
+              <View style={styles.designerPromoButtonGlow} />
+              <LinearGradient
+                colors={['#3A0006', '#1A0003']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.designerPromoButton}
+              >
+                <Text style={styles.designerPromoButtonText}>Start Designing</Text>
+                <Feather name="chevron-right" size={16} color="#fff" style={{marginLeft: 2, marginTop: 1}} />
+              </LinearGradient>
+            </View>
+          </View>
+          <Image 
+            source={require('../assets/doors/composite-doors/exploded-door.png')} 
+            style={[
+              styles.designerPromoImage,
+              (isTablet && !isLandscape) && { height: '100%', width: 170, right: -15, bottom: -5 }
+            ]} 
+            resizeMode="contain" 
+          />
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderTabletHeroAndCTAs = () => (
+    <View style={[styles.leftPaneTablet, { width: isLandscape ? '36%' : '42%' }]}>
+      
+      {/* Hero Image (Top) */}
+      <Image 
+        source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} 
+        style={[
+          styles.tabletHeroImage,
+          !isWindowProduct && { height: isLandscape ? 360 : 480 } // Shrink on landscape so it fits!
+        ]} 
+        resizeMode="cover"
+      />
+
+      {/* Door Designer Promo (Middle - Tablets Only) */}
+      {isCompositeDoor && renderDesignerPromo()}
+
+      {/* AI Visualiser Promo (Middle) */}
+      {isWindowProduct && (
+        <TouchableOpacity 
+          style={[styles.aiPromoContainer]}
+          onPress={() => navigation.navigate('VisualiserScreen')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.aiPromoInner}>
+            <Image
+              source={require('../assets/visualiser-card-bg.jpg')}
+              style={styles.aiPromoBackground}
+              resizeMode="cover"
+            />
+            <View style={styles.aiPromoContent}>
+              <Text style={styles.aiPromoTitle}>See New Windows{'\n'}Before You Buy</Text>
+              <Text style={styles.aiPromoDescription}>
+                Upload a photo and try{'\n'}new windows instantly.
+              </Text>
+              <View style={styles.aiPromoButtonWrapper}>
+                <View style={styles.aiPromoButtonGlow} />
+                <LinearGradient
+                  colors={['#1E3A8A', '#172554']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.aiPromoButton}
+                >
+                  <Text style={styles.aiPromoButtonText}>Try Visualiser</Text>
+                  <Feather name="arrow-right" size={16} color="#fff" style={{marginLeft: 8}} />
+                </LinearGradient>
+              </View>
+            </View>
+            <Image 
+              source={require('../assets/visualiser-card-img.jpg')} 
+              style={styles.aiPromoImage} 
+              resizeMode="contain" 
+            />
+          </View>
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.tabletCtaWrapper}>
+        {isCompositeDoor && (
+          <TouchableOpacity 
+            style={[styles.ctaButton, styles.ctaButtonSecondary, { flex: 0, width: '100%', marginBottom: 12 }]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Designer')} 
+          >
+            <Feather name="sliders" size={18} color="#111" style={{marginRight: 6}} />
+            <Text style={styles.ctaTextSecondary}>Design Yours</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity 
+          style={[styles.ctaButton, { flex: 0, width: '100%' }]}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('ProductEnquiry', { product })} 
+        >
+          <Text style={styles.ctaText}>Enquire Now</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        {/* Custom Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.iconButton} 
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="chevron-left" size={24} color="#111" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{product.title || 'Product'}</Text>
-          <TouchableOpacity style={styles.iconButton}>
-            <Feather name="bell" size={20} color="#111" />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.container, isTablet && styles.tabletSplitContainer]}>
+        
+        {isTablet && renderTabletHeroAndCTAs()}
 
-        {/* Tab Bar */}
-        {renderTabs()}
-
-        {/* Dynamic Content */}
-        <ScrollView 
-          ref={scrollViewRef}
-          style={styles.scrollView} 
-          showsVerticalScrollIndicator={false}
-        >
-          {renderContent()}
-        </ScrollView>
-
-        {/* Fixed CTA button */}
-        <View style={styles.ctaContainer}>
-          {isCompositeDoor && (
+        <View style={isTablet ? [styles.rightPaneTablet, { width: isLandscape ? '64%' : '58%' }] : styles.container}>
+          {/* Custom Header */}
+          <View style={styles.header}>
             <TouchableOpacity 
-              style={[styles.ctaButton, styles.ctaButtonSecondary]}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('Designer')} 
+              style={styles.iconButton} 
+              onPress={() => navigation.goBack()}
             >
-              <Feather name="sliders" size={18} color="#111" style={{marginRight: 6}} />
-              <Text style={styles.ctaTextSecondary}>Design Yours</Text>
+              <Feather name="chevron-left" size={24} color="#111" />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity 
-            style={styles.ctaButton}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate('ProductEnquiry', { product })} 
+            <Text style={styles.headerTitle}>{product.title || 'Product'}</Text>
+            <TouchableOpacity style={styles.iconButton}>
+              <Feather name="bell" size={20} color="#111" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Tab Bar */}
+          {renderTabs()}
+
+          {/* Dynamic Content */}
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.scrollView} 
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.ctaText}>Enquire Now</Text>
-          </TouchableOpacity>
+            {renderContent()}
+          </ScrollView>
+
+          {/* Fixed CTA button (Mobile Only) */}
+          {!isTablet && (
+            <View style={styles.ctaContainer}>
+              {isCompositeDoor && (
+                <TouchableOpacity 
+                  style={[styles.ctaButton, styles.ctaButtonSecondary]}
+                  activeOpacity={0.8}
+                  onPress={() => navigation.navigate('Designer')} 
+                >
+                  <Feather name="sliders" size={18} color="#111" style={{marginRight: 6}} />
+                  <Text style={styles.ctaTextSecondary}>Design Yours</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.ctaButton}
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('ProductEnquiry', { product })} 
+              >
+                <Text style={styles.ctaText}>Enquire Now</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
         </View>
 
-        {/* Image Lightbox Modal */}
-        <Modal
-          visible={isViewerVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setIsViewerVisible(false)}
-        >
-          <ImageViewer
-            imageUrls={viewerImages}
-            index={viewerIndex}
-            enableSwipeDown={true}
-            onCancel={() => setIsViewerVisible(false)}
-            onSwipeDown={() => setIsViewerVisible(false)}
-            saveToLocalByLongPress={false}
-            backgroundColor="rgba(0,0,0,0.95)"
-            renderIndicator={(currentIndex, allSize) => {
-              if (allSize <= 1) return null;
-              return (
-                <View style={styles.indicator}>
-                  <Text style={styles.indicatorText}>
-                    {currentIndex} / {allSize}
-                  </Text>
-                </View>
-              );
-            }}
-            renderHeader={() => (
-              <TouchableOpacity
-                onPress={() => setIsViewerVisible(false)}
-                style={styles.closeButton}
-              >
-                <AntDesign name="close" size={22} color="#fff" />
-              </TouchableOpacity>
-            )}
-          />
-        </Modal>
+        {renderLightbox()}
+
       </View>
     </SafeAreaView>
   );
@@ -598,6 +817,113 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  tabletSplitContainer: {
+    flexDirection: 'row',
+  },
+  leftPaneTablet: {
+    height: '100%',
+    padding: 20,
+    backgroundColor: '#F9FAFC',
+    borderRightWidth: 1,
+    borderRightColor: '#EAECF0',
+  },
+  rightPaneTablet: {
+    height: '100%',
+    backgroundColor: '#fff',
+  },
+  tabletHeroImage: {
+    width: '100%',
+    height: 320,
+    borderRadius: 24,
+    marginBottom: 20,
+  },
+  tabletCtaWrapper: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: 10,
+  },
+  aiPromoContainer: {
+    position: 'relative',
+    height: 190,
+    zIndex: 10,
+    marginBottom: 20,
+  },
+  aiPromoInner: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  aiPromoBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  aiPromoContent: {
+    padding: 24,
+    zIndex: 2,
+    flex: 1,
+    width: '65%', 
+    justifyContent: 'center', 
+  },
+  aiPromoTitle: {
+    fontFamily: 'RB',
+    fontSize: 20,
+    lineHeight: 24,
+    color: '#FFFFFF',
+    marginBottom: 6, 
+  },
+  aiPromoDescription: {
+    fontFamily: 'RM',
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#D4D4D8',
+    marginBottom: 14, 
+  },
+  aiPromoButtonWrapper: {
+    alignSelf: 'flex-start',
+    position: 'relative',
+  },
+  aiPromoButtonGlow: {
+    position: 'absolute',
+    top: -2,
+    bottom: -2,
+    left: -2,
+    right: -2,
+    backgroundColor: 'rgba(30, 58, 138, 0.8)',
+    borderRadius: 22,
+    zIndex: 1,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  aiPromoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 18,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
+  },
+  aiPromoButtonText: {
+    fontFamily: 'RB',
+    fontSize: 13,
+    color: '#FFFFFF',
+  },
+  aiPromoImage: {
+    position: 'absolute',
+    right: -15, 
+    bottom: -5,  
+    width: '50%', 
+    height: '105%', 
+    zIndex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -912,6 +1238,26 @@ const styles = StyleSheet.create({
     color: '#374151',
     textAlign: 'center',
   },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 0,
+    marginBottom: 16,
+  },
+  paginationDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    marginHorizontal: 4,
+  },
+  paginationDotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#CE0000',
+  },
   // Colour swatches
   swatchGrid: {
     flexDirection: 'row',
@@ -1061,5 +1407,92 @@ const styles = StyleSheet.create({
     height: '115%',
     width: 200,
     zIndex: 1,
+  },
+  // Brochure Tab Styles
+  brochureLoadingContainer: {
+    paddingTop: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brochureCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+  },
+  brochureGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  brochureCardHalf: {
+    width: '48%',
+  },
+  brochureCoverWrapper: {
+    width: '100%',
+    height: 260,
+    position: 'relative',
+  },
+  brochureCoverWrapperTablet: {
+    height: 340,
+  },
+  brochureCoverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  brochureCoverGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+  brochureInfoColumn: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 14,
+    alignItems: 'center',
+  },
+  brochureCardTitle: {
+    fontFamily: 'RB',
+    fontSize: 15,
+    color: '#111',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  brochureCardCategory: {
+    fontFamily: 'RM',
+    fontSize: 11,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  brochureViewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E5040A',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#E5040A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+    gap: 6,
+  },
+  brochureViewBtnText: {
+    fontFamily: 'RB',
+    fontSize: 13,
+    color: '#fff',
   },
 });

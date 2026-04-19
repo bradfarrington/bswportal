@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, Image, TextInput, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
@@ -7,8 +7,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CATEGORIES } from '../data/ProductsData';
 
 const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
 const CARD_GAP = 12;
-const SLIDER_WIDTH = width - 40; // accounts for heroContainer paddingHorizontal: 20
+const SLIDER_WIDTH = isTablet ? 450 : width - 40; // accounts for heroContainer paddingHorizontal: 20
 const CARD_WIDTH = SLIDER_WIDTH - CARD_GAP;
 
 const heroSlides = [
@@ -39,6 +40,10 @@ const heroSlides = [
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTabletDynamic = windowWidth >= 768;
+  const isLandscape = windowWidth > windowHeight;
 
   const allProducts = useMemo(() => {
     let products = [];
@@ -356,64 +361,69 @@ const heroSlides = [
                ))}
             </View>
 
-            {/* Categories */}
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitleNoMargin}>View Products</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Products')} activeOpacity={0.7}>
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.categoriesContent}
-            >
-              {CATEGORIES.map((cat) => (
-                 <TouchableOpacity key={cat.id} style={styles.categoryItem} onPress={() => handleCategoryPress(cat)}>
-                    <View style={styles.catImageProps}>
-                      <Image source={cat.image} style={styles.catImage} />
-                    </View>
-                    <Text style={styles.catName}>{cat.title}</Text>
-                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+            {/* 2 Column Layout Container for Landscape Tablet */}
+            <View style={[isTabletDynamic && isLandscape && { flexDirection: 'row', paddingHorizontal: 20, marginTop: 15, alignItems: 'flex-start' }]}>
+              {/* Left Column: Categories */}
+              <View style={[isTabletDynamic && isLandscape && { flex: 1, marginRight: 40 }]}>
+                <View style={[styles.sectionHeaderRow, isTabletDynamic && isLandscape && { paddingHorizontal: 0, marginTop: 0 }]}>
+                  <Text style={styles.sectionTitleNoMargin}>View Products</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Products')} activeOpacity={0.7}>
+                    <Text style={styles.seeAllText}>View All</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={[styles.categoriesContent, isTabletDynamic && isLandscape && { paddingHorizontal: 0 }]}
+                >
+                  {CATEGORIES.map((cat) => (
+                     <TouchableOpacity key={cat.id} style={[styles.categoryItem, isTabletDynamic && isLandscape && { marginRight: 20 }]} onPress={() => handleCategoryPress(cat)}>
+                        <View style={[styles.catImageProps, isTabletDynamic && isLandscape && { width: 175, height: 175 }]}>
+                          <Image source={cat.image} style={styles.catImage} />
+                        </View>
+                        <Text style={[styles.catName, isTabletDynamic && isLandscape && { fontSize: 18, marginTop: 8 }]}>{cat.title}</Text>
+                     </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
 
-            {/* Orders Promo Card */}
-            <View style={styles.ordersPromoWrapper}>
-              <TouchableOpacity 
-                style={styles.ordersPromoContainer}
-                onPress={() => navigation.navigate('Orders')}
-                activeOpacity={0.9}
-              >
-                <View style={styles.ordersPromoInner}>
-                  <Image
-                    source={require('../assets/track-orders-bg.png')}
-                    style={styles.ordersPromoBackground}
-                    resizeMode="cover"
-                  />
-                  
-                  <View style={styles.ordersPromoContent}>
-                    <Text style={styles.ordersPromoTitle}>Track Your Orders</Text>
-                    <Text style={styles.ordersPromoDescription}>
-                      Stay updated on the{'\n'}progress of your order
-                    </Text>
+              {/* Right Column: Orders Promo Card */}
+              <View style={[styles.ordersPromoWrapper, isTabletDynamic && isLandscape && { width: CARD_WIDTH, paddingHorizontal: 0, marginTop: 0, marginBottom: 0, alignItems: 'stretch' }]}>
+                <TouchableOpacity 
+                  style={[styles.ordersPromoContainer, isTabletDynamic && isLandscape && { height: 255 }]}
+                  onPress={() => navigation.navigate('Orders')}
+                  activeOpacity={0.9}
+                >
+                  <View style={styles.ordersPromoInner}>
+                    <Image
+                      source={require('../assets/track-orders-bg.png')}
+                      style={styles.ordersPromoBackground}
+                      resizeMode="cover"
+                    />
                     
-                    <View style={styles.ordersPromoButtonWrapper}>
-                      <View style={styles.ordersPromoButtonGlow} />
-                      <LinearGradient
-                        colors={['#5A0006', '#1A0003']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.ordersPromoButton}
-                      >
-                        <Feather name="eye" size={16} color="#fff" style={{marginRight: 8}} />
-                        <Text style={styles.ordersPromoButtonText}>View My Orders</Text>
-                        <Feather name="arrow-right" size={16} color="#fff" style={{marginLeft: 8, marginTop: 1}} />
-                      </LinearGradient>
+                    <View style={styles.ordersPromoContent}>
+                      <Text style={styles.ordersPromoTitle}>Track Your Orders</Text>
+                      <Text style={styles.ordersPromoDescription}>
+                        Stay updated on the{'\n'}progress of your order
+                      </Text>
+                      
+                      <View style={styles.ordersPromoButtonWrapper}>
+                        <View style={styles.ordersPromoButtonGlow} />
+                        <LinearGradient
+                          colors={['#5A0006', '#1A0003']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.ordersPromoButton}
+                        >
+                          <Feather name="eye" size={16} color="#fff" style={{marginRight: 8}} />
+                          <Text style={styles.ordersPromoButtonText}>View My Orders</Text>
+                          <Feather name="arrow-right" size={16} color="#fff" style={{marginLeft: 8, marginTop: 1}} />
+                        </LinearGradient>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             </View>
 
           </>
@@ -692,12 +702,12 @@ const styles = StyleSheet.create({
   },
   categoryItem: {
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: isTablet ? 24 : 16,
   },
   catImageProps: {
-    width: 88,
-    height: 88,
-    borderRadius: 12,
+    width: isTablet ? 150 : 100,
+    height: isTablet ? 150 : 100,
+    borderRadius: isTablet ? 16 : 12,
     backgroundColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
@@ -710,9 +720,10 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   catName: {
-    fontSize: 14,
+    fontSize: isTablet ? 16 : 14,
     color: '#4B5563',
     fontFamily: 'RM',
+    marginTop: 4,
   },
   sectionHeader: {
     flexDirection: 'column',
@@ -1013,10 +1024,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 25,
     marginBottom: 20,
+    alignItems: isTablet ? 'center' : 'stretch',
   },
   ordersPromoContainer: {
     position: 'relative',
     height: 220,
+    width: '100%',
+    maxWidth: isTablet ? 800 : undefined,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,

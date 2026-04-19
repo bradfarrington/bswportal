@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Modal, Animated } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Modal, Animated, useWindowDimensions } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { hasReachedGenerationLimit, incrementGenerationCount } from "../utils/VisualiserStorage";
@@ -33,6 +33,10 @@ const MAINTENANCE_TIPS = [
 ];
 
 export default function VisualiserScreen({ navigation }) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const isLandscape = windowWidth > windowHeight;
+
   const [imageUri, setImageUri] = useState(null);
   const [windowColor, setWindowColor] = useState("White");
   const [doorColor, setDoorColor] = useState("None");
@@ -203,58 +207,64 @@ export default function VisualiserScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>AI Visualiser</Text>
-      <Text style={styles.subtitle}>See what new windows and doors will look like on your house.</Text>
+        <Text style={styles.title}>AI Visualiser</Text>
+        <Text style={styles.subtitle}>See what new windows and doors will look like on your house.</Text>
 
-      {/* Image Uploader */}
-      <View style={styles.uploadSection}>
-        {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.previewImage} />
+        {/* Image Uploader */}
+        <View style={styles.uploadSection}>
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={[styles.previewImage, isTablet && { height: 300 }]} />
+          ) : (
+            <View style={[styles.placeholderContainer, isTablet && { height: 260 }]}>
+              <Ionicons name="home-outline" size={isTablet ? 56 : 48} color="#9CA3AF" />
+              <Text style={styles.placeholderText}>Upload front or rear of house</Text>
+            </View>
+          )}
+          
+          <View style={styles.uploadButtonsRow}>
+            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(true)}>
+              <Ionicons name="camera" size={20} color="#fff" />
+              <Text style={styles.uploadButtonText}>Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.uploadButtonAlt} onPress={() => pickImage(false)}>
+              <Ionicons name="images" size={20} color="#111827" />
+              <Text style={styles.uploadButtonAltText}>Gallery</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.clearButton} onPress={() => setImageUri(null)}>
+              <Text style={styles.clearButtonText}>Clear Image</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Configuration Form */}
+        <View style={[styles.configSection, isTablet && styles.configSectionTablet]}>
+          <View style={isTablet ? { flex: 1 } : null}>
+            <DropdownInput label="Window Colour" value={windowColor} options={WINDOW_COLORS} onSelect={setWindowColor} />
+          </View>
+          <View style={isTablet ? { flex: 1 } : null}>
+            <DropdownInput label="Door Colour (Optional)" value={doorColor} options={DOOR_COLORS} onSelect={setDoorColor} />
+          </View>
+          <View style={isTablet ? { flex: 1 } : null}>
+            <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
+          </View>
+        </View>
+
+        {limitReached ? (
+          <View style={styles.limitContainer}>
+            <Text style={styles.limitText}>Generation limit reached for this device.</Text>
+          </View>
         ) : (
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="home-outline" size={48} color="#9CA3AF" />
-            <Text style={styles.placeholderText}>Upload front or rear of house</Text>
+          <View style={{ marginTop: 16 }}>
+            <PrimaryButton 
+              title={isGenerating ? "Generating..." : "Generate Preview"}
+              icon={!isGenerating ? <Ionicons name="color-wand-outline" size={20} color="#fff" /> : null}
+              rightIcon={!isGenerating ? <Feather name="arrow-right" size={18} color="#fff" /> : null}
+              onPress={handleGenerate}
+              isLoading={isGenerating}
+              disabled={!imageUri}
+            />
           </View>
         )}
-        
-        <View style={styles.uploadButtonsRow}>
-          <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(true)}>
-            <Ionicons name="camera" size={20} color="#fff" />
-            <Text style={styles.uploadButtonText}>Camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.uploadButtonAlt} onPress={() => pickImage(false)}>
-            <Ionicons name="images" size={20} color="#111827" />
-            <Text style={styles.uploadButtonAltText}>Gallery</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={styles.clearButton} onPress={() => setImageUri(null)}>
-            <Text style={styles.clearButtonText}>Clear Image</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Configuration Form */}
-      <View style={styles.configSection}>
-        <DropdownInput label="Window Colour" value={windowColor} options={WINDOW_COLORS} onSelect={setWindowColor} />
-        <DropdownInput label="Door Colour (Optional)" value={doorColor} options={DOOR_COLORS} onSelect={setDoorColor} />
-        <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
-      </View>
-
-      {limitReached ? (
-        <View style={styles.limitContainer}>
-          <Text style={styles.limitText}>Generation limit reached for this device.</Text>
-        </View>
-      ) : (
-        <View style={{ marginTop: 16 }}>
-          <PrimaryButton 
-            title={isGenerating ? "Generating..." : "Generate Preview"}
-            icon={!isGenerating ? <Ionicons name="color-wand-outline" size={20} color="#fff" /> : null}
-            rightIcon={!isGenerating ? <Feather name="arrow-right" size={18} color="#fff" /> : null}
-            onPress={handleGenerate}
-            isLoading={isGenerating}
-            disabled={!imageUri}
-          />
-        </View>
-      )}
 
       {/* Loading Overlay Modal */}
       <Modal visible={isGenerating} transparent animationType="fade">
@@ -415,6 +425,10 @@ const styles = StyleSheet.create({
   },
   configSection: {
     marginBottom: 32,
+  },
+  configSectionTablet: {
+    flexDirection: 'row',
+    gap: 16,
   },
   sectionTitle: {
     fontFamily: "InterSemiBold",

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Image, Dimensions, Platform, TextInput, Modal,
   KeyboardAvoidingView, Alert, LayoutAnimation, UIManager, Animated,
+  useWindowDimensions,
 } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -108,6 +109,15 @@ const collectStepImageUrls = (stepId, jobData, localDataRef) => {
 };
 
 const Designer = () => {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTabletDevice = windowWidth >= 768;
+  const isLandscapeMode = windowWidth > windowHeight;
+
+  // Tablet portrait: bigger style thumbnails
+  const STYLE_CARD_W = isTabletDevice && !isLandscapeMode ? 190 : 140;
+  const STYLE_IMG_W = isTabletDevice && !isLandscapeMode ? 170 : 120;
+  const STYLE_IMG_H = isTabletDevice && !isLandscapeMode ? 240 : 180;
+
   // Core state
   const [job, setJob] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -1207,12 +1217,12 @@ const Designer = () => {
               return (
                 <TouchableOpacity
                   key={uniqueKey}
-                  style={[styles.styleCard, selected && styles.styleCardSelected]}
+                  style={[styles.styleCard, { width: STYLE_CARD_W }, selected && styles.styleCardSelected]}
                   onPress={() => handleSelectOption(categoryId, optionId, dataLinkID)}
                   activeOpacity={0.7}
                   disabled={selecting}
                 >
-                  <View style={styles.styleCardImageWrap}>
+                  <View style={[styles.styleCardImageWrap, { width: STYLE_IMG_W, height: STYLE_IMG_H }]}>
                     {svgData && categoryId === OptionCategories.SidelightStyle ? (
                       <View style={{ width: 120, height: 180, overflow: 'hidden' }} pointerEvents="none">
                         <WebView

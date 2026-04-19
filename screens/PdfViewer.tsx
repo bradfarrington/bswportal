@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { StyleSheet, Dimensions, View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, StatusBar } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, StatusBar, useWindowDimensions } from "react-native";
 import Pdf from "react-native-pdf";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { AntDesign, Feather } from "@expo/vector-icons";
@@ -14,10 +14,12 @@ const PdfViewerScreen = () => {
   const route = useRoute<PdfViewerRouteProp>();
   const navigation = useNavigation();
   const { url } = route.params;
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   
   const pdfRef = useRef<Pdf>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [pdfLayout, setPdfLayout] = useState<{ width: number; height: number } | null>(null);
 
   const source = {
     uri: url,
@@ -37,6 +39,11 @@ const PdfViewerScreen = () => {
     }
   };
 
+  const handlePdfWrapperLayout = (event: any) => {
+    const { width, height } = event.nativeEvent.layout;
+    setPdfLayout({ width, height });
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <SafeAreaView style={styles.container}>
@@ -50,32 +57,41 @@ const PdfViewerScreen = () => {
            <View style={{ flex: 1 }} />
         </View>
 
-        <View style={styles.pdfWrapper}>
-          <Pdf
-            ref={pdfRef}
-            source={source}
-            trustAllCerts={false}
-            horizontal={true}
-            enablePaging={true}
-            style={styles.pdf}
-            onPageChanged={(page, numberOfPages) => {
-              setCurrentPage(page);
-              setTotalPages(numberOfPages);
-            }}
-            renderActivityIndicator={() => (
-               <View style={styles.loadingWrapper}>
-                   <ActivityIndicator size="large" color="#E5040A" />
-                   <Text style={styles.loadingText}>Opening Booklet...</Text>
-               </View>
-            )}
-            onLoadComplete={(pages) => {
-              setTotalPages(pages);
-            }}
-            onError={(error) => {
-              console.error(error);
-              alert("Something went wrong loading the PDF.");
-            }}
-          />
+        <View style={styles.pdfWrapper} onLayout={handlePdfWrapperLayout}>
+          {pdfLayout && (
+            <Pdf
+              key={`${pdfLayout.width}-${pdfLayout.height}`}
+              ref={pdfRef}
+              source={source}
+              trustAllCerts={false}
+              horizontal={true}
+              enablePaging={true}
+              fitPolicy={2}
+              singlePage={true}
+              style={{
+                width: pdfLayout.width,
+                height: pdfLayout.height,
+                backgroundColor: "#000",
+              }}
+              onPageChanged={(page, numberOfPages) => {
+                setCurrentPage(page);
+                setTotalPages(numberOfPages);
+              }}
+              renderActivityIndicator={() => (
+                 <View style={styles.loadingWrapper}>
+                     <ActivityIndicator size="large" color="#E5040A" />
+                     <Text style={styles.loadingText}>Opening Booklet...</Text>
+                 </View>
+              )}
+              onLoadComplete={(pages) => {
+                setTotalPages(pages);
+              }}
+              onError={(error) => {
+                console.error(error);
+                alert("Something went wrong loading the PDF.");
+              }}
+            />
+          )}
         </View>
 
         {/* Bottom Navigation Controls */}
@@ -130,12 +146,6 @@ const styles = StyleSheet.create({
   },
   pdfWrapper: {
     flex: 1,
-    backgroundColor: "#000",
-    justifyContent: "center",
-  },
-  pdf: {
-    flex: 1,
-    width: Dimensions.get("window").width,
     backgroundColor: "#000",
   },
   loadingWrapper: {
