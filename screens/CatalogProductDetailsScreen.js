@@ -15,13 +15,29 @@ import { MaterialIcons, Feather, AntDesign } from '@expo/vector-icons';
 import axios from 'axios';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TABS = ['Overview', 'Details', 'Styles', 'Glass', 'Colours', 'Hardware', 'Extras'];
+const TABS_DEFAULT = ['Overview', 'Details', 'Styles', 'Glass', 'Colours', 'Hardware', 'Extras'];
+const TABS_COMPOSITE = ['Overview', 'Details', 'Styles', 'Colours', 'Glass', 'Hardware', 'Extras'];
 
 export default function CatalogProductDetailsScreen({ route, navigation }) {
   const { product } = route.params;
+
+  const isCompositeDoor = [
+    'composite-doors', 
+    'edge-collection', 
+    'gemstone-collection', 
+    'galaxy-collection', 
+    'highline-range', 
+    'elements-collection', 
+    'elegance-collection', 
+    'stable-doors', 
+    'double-doors', 
+    'inox-collection'
+  ].includes(product.id);
+
   const [activeTab, setActiveTab] = useState('Overview');
   const [isExpanded, setIsExpanded] = useState(false);
   const scrollViewRef = useRef(null);
@@ -109,7 +125,8 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
   }, [product.galleryAlbumName]);
 
   const renderTabs = () => {
-    const availableTabs = TABS.filter(tab => {
+    const currentTabs = isCompositeDoor ? TABS_COMPOSITE : TABS_DEFAULT;
+    const availableTabs = currentTabs.filter(tab => {
       if (tab === 'Extras') return product.extras && product.extras.length > 0;
       if (tab === 'Colours') return product.colours && product.colours.length > 0;
       if (tab === 'Glass') return product.glass && product.glass.length > 0;
@@ -148,7 +165,25 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
   const renderOverview = () => (
     <View style={styles.overviewSection}>
       {/* Hero Image */}
-      <Image source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} style={styles.heroImage} />
+      <Image 
+        source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} 
+        style={[
+          styles.heroImage,
+          ([
+            'upvc-doors', 
+            'composite-doors', 
+            'edge-collection', 
+            'gemstone-collection', 
+            'galaxy-collection', 
+            'highline-range', 
+            'elements-collection', 
+            'elegance-collection', 
+            'stable-doors', 
+            'double-doors', 
+            'inox-collection'
+          ].includes(product.id)) && { height: 420 }
+        ]} 
+      />
 
       {/* Trust Badge Row */}
       <View style={styles.trustBadgeRow}>
@@ -173,6 +208,48 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Design Your Dream Door Card (for composite doors) */}
+      {isCompositeDoor && (
+        <View style={styles.promoWrapper}>
+          <TouchableOpacity 
+            style={[styles.designerPromoContainer, { marginHorizontal: 0, marginTop: 10, marginBottom: 30 }]}
+            onPress={() => navigation.navigate('Designer')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.designerPromoInner}>
+              <Image
+                source={require('../assets/doors/composite-doors/deisnger-bg-image.png')}
+                style={styles.designerPromoBackground}
+                resizeMode="cover"
+              />
+              <View style={styles.designerPromoLeftContent}>
+                <Text style={styles.designerPromoTitle}>Design Your{'\n'}Dream Door</Text>
+                <Text style={styles.designerPromoDescription}>
+                  Create your perfect{'\n'}custom door in minutes.
+                </Text>
+                <View style={styles.designerPromoButtonWrapper}>
+                  <View style={styles.designerPromoButtonGlow} />
+                  <LinearGradient
+                    colors={['#3A0006', '#1A0003']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.designerPromoButton}
+                  >
+                    <Text style={styles.designerPromoButtonText}>Start Designing</Text>
+                    <Feather name="chevron-right" size={16} color="#fff" style={{marginLeft: 2, marginTop: 1}} />
+                  </LinearGradient>
+                </View>
+              </View>
+              <Image 
+                source={require('../assets/doors/composite-doors/exploded-door.png')} 
+                style={styles.designerPromoImage} 
+                resizeMode="contain" 
+              />
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Gallery Section */}
       {galleryPhotos.length > 0 && (
@@ -340,6 +417,16 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
               ))}
             </View>
           )}
+          {styleGroup.carouselImages && styleGroup.carouselImages.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContainer}>
+              {styleGroup.carouselImages.map((img, i) => (
+                <TouchableOpacity key={i} style={styles.carouselItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <Image source={img.image} style={styles.carouselImage} resizeMode="contain" />
+                  <Text style={styles.carouselLabel}>{img.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
       ))}
       <View style={{ height: 100 }} />
@@ -444,6 +531,16 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
 
         {/* Fixed CTA button */}
         <View style={styles.ctaContainer}>
+          {isCompositeDoor && (
+            <TouchableOpacity 
+              style={[styles.ctaButton, styles.ctaButtonSecondary]}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('Designer')} 
+            >
+              <Feather name="sliders" size={18} color="#111" style={{marginRight: 6}} />
+              <Text style={styles.ctaTextSecondary}>Design Yours</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={styles.ctaButton}
             activeOpacity={0.8}
@@ -719,8 +816,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.05)',
+    flexDirection: 'row',
+    gap: 12,
   },
   ctaButton: {
+    flex: 1,
     backgroundColor: '#E5040A', // Brand Primary Red
     borderRadius: 30,
     height: 56,
@@ -734,7 +834,20 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
+    fontFamily: 'RB',
+  },
+  ctaButtonSecondary: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+    flexDirection: 'row',
+  },
+  ctaTextSecondary: {
+    color: '#111',
+    fontSize: 16,
     fontFamily: 'RB',
   },
   // Image grid for details (frame styles, security, hardware)
@@ -784,21 +897,17 @@ const styles = StyleSheet.create({
     paddingRight: 20, // To avoid getting cut off entirely at the very end
   },
   carouselItem: {
-    width: 240,
-    marginRight: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EAECF0',
-    overflow: 'hidden',
+    width: 220,
+    marginRight: 20,
+    alignItems: 'center',
   },
   carouselImage: {
     width: '100%',
-    height: 160,
+    height: 380,
   },
   carouselLabel: {
-    padding: 12,
-    fontSize: 14,
+    paddingTop: 16,
+    fontSize: 16,
     fontFamily: 'RB',
     color: '#374151',
     textAlign: 'center',
@@ -869,5 +978,88 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  // Designer Promo styles imported from Dashboard
+  designerPromoContainer: {
+    position: 'relative',
+    height: 220,
+    zIndex: 10,
+  },
+  designerPromoInner: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  designerPromoBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  designerPromoLeftContent: {
+    padding: 24,
+    zIndex: 2,
+    width: '60%',
+    justifyContent: 'center',
+  },
+  designerPromoTitle: {
+    fontFamily: 'RB',
+    fontSize: 24,
+    lineHeight: 30,
+    color: '#FFFFFF',
+    marginBottom: 10,
+  },
+  designerPromoDescription: {
+    fontFamily: 'RM',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#D4D4D8',
+    marginBottom: 18,
+  },
+  designerPromoButtonWrapper: {
+    alignSelf: 'flex-start',
+    position: 'relative',
+    marginTop: 4,
+  },
+  designerPromoButtonGlow: {
+    position: 'absolute',
+    top: -2,
+    bottom: -2,
+    left: -2,
+    right: -2,
+    backgroundColor: 'rgba(229, 4, 10, 0.8)',
+    borderRadius: 22,
+    zIndex: 1,
+    shadowColor: '#e5040a',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  designerPromoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 60, 60, 0.3)',
+  },
+  designerPromoButtonText: {
+    color: '#fff',
+    fontFamily: 'RB',
+    fontSize: 13,
+  },
+  designerPromoImage: {
+    position: 'absolute',
+    right: -20,
+    bottom: -15, /* Tucked slightly down to use mask */
+    height: '115%',
+    width: 200,
+    zIndex: 1,
   },
 });

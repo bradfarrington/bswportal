@@ -120,7 +120,7 @@ export default function VisualiserResultScreen({ route, navigation }) {
               {/* Semi-transparent watermark overlay covering the generated image */}
               <View style={styles.watermarkOverlay} pointerEvents="none">
                   <Image 
-                    source={require("../assets/composite-doors/background-1-no-bg.png")} 
+                    source={require("../assets/doors/composite-doors/background-1-no-bg.png")} 
                     style={styles.watermarkImageFull} 
                     resizeMode="cover" 
                   />

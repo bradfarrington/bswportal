@@ -68,7 +68,7 @@ const heroSlides = [
 
   const APP_PAGES = useMemo(() => [
     { id: 'page-visualiser', title: 'AI Window Visualiser', type: 'Feature', image: require('../assets/visualiser-card-img.jpg'), icon: 'image', route: 'VisualiserScreen' },
-    { id: 'page-designer', title: 'Door Designer', type: 'Feature', image: require('../assets/composite-doors/deisnger-bg-image.png'), overlayImage: require('../assets/composite-doors/exploded-door.png'), icon: 'edit-3', route: 'Designer' },
+    { id: 'page-designer', title: 'Door Designer', type: 'Feature', image: require('../assets/doors/composite-doors/deisnger-bg-image.png'), overlayImage: require('../assets/doors/composite-doors/exploded-door.png'), icon: 'edit-3', route: 'Designer' },
     { id: 'page-gallery', title: 'Gallery', type: 'Page', image: require('../assets/hero-bg-cropped.png'), icon: 'image', route: 'Gallery' },
     { id: 'page-orders', title: 'Orders', type: 'Page', image: require('../assets/icon.png'), icon: 'shopping-cart', route: 'Orders' },
     { id: 'page-sale', title: 'Sale', type: 'Page', image: require('../assets/commercial-category-image.jpg'), icon: 'tag', route: 'Sale' },
@@ -313,7 +313,7 @@ const heroSlides = [
                   >
                     <View style={styles.designerPromoInner}>
                       <Image
-                        source={require('../assets/composite-doors/deisnger-bg-image.png')}
+                        source={require('../assets/doors/composite-doors/deisnger-bg-image.png')}
                         style={styles.designerPromoBackground}
                         resizeMode="cover"
                       />
@@ -340,7 +340,7 @@ const heroSlides = [
                     </View>
                     
                     <Image 
-                      source={require('../assets/composite-doors/exploded-door.png')} 
+                      source={require('../assets/doors/composite-doors/exploded-door.png')} 
                       style={styles.designerPromoImage} 
                       resizeMode="contain" 
                     />

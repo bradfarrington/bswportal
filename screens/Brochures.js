@@ -276,7 +276,7 @@ const Brochures = () => {
                          activeOpacity={0.9}
                       >
                          <ImageBackground
-                             source={require('../assets/composite-doors/deisnger-bg-image.png')}
+                             source={require('../assets/doors/composite-doors/deisnger-bg-image.png')}
                              style={style.heroCard}
                              imageStyle={{ borderRadius: 20 }}
                          >
