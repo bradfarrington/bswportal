@@ -8,7 +8,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { registerForPushNotificationsAsync } from "./components/pushNotifications";
 import { StatusBar } from "expo-status-bar"; 
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -69,11 +69,11 @@ export default function App() {
     return null;
   }
   return (
-    <SafeAreaView style={{flex:1, backgroundColor:'#F9FAFB'}}>
+    <SafeAreaProvider>
     <NavigationContainer>
       <AppNavigator />
       <StatusBar style="auto" />
     </NavigationContainer>
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

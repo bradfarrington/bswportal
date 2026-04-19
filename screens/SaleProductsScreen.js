@@ -1,7 +1,6 @@
 import {
   View,
   Text,
-  SafeAreaView,
   Image,
   TouchableOpacity,
   FlatList,
@@ -136,7 +135,7 @@ const DisplayProducts = (props) => {
   };
 
   return (
-    <SafeAreaView
+    <View
       style={{ flex: 1, alignItems: "center", backgroundColor: "#F9F9FB" }}
     >
       {!loading ? (
@@ -148,7 +147,7 @@ const DisplayProducts = (props) => {
       ) : (
         <ActivityIndicator size={"large"} color={'red'} />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 export default DisplayProducts;

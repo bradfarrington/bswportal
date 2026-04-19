@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Image, Dimensions, Platform, TextInput, Modal,
   KeyboardAvoidingView, Alert, LayoutAnimation, UIManager, Animated,
 } from 'react-native';
@@ -1596,7 +1596,7 @@ const Designer = () => {
 
   if (error) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
+      <View style={styles.loadingContainer}>
         {/* Hidden API WebView still mounts for retry */}
         <WebView
           ref={apiWebViewRef}
@@ -1619,7 +1619,7 @@ const Designer = () => {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 

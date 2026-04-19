@@ -1,4 +1,5 @@
-import { View, Text, SafeAreaView, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useLayoutEffect } from "react";
 import * as Animatable from "react-native-animatable";
 import { useNavigation } from "@react-navigation/native";
@@ -14,7 +15,7 @@ const HomeScreen = () => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.containerHome}>
+    <SafeAreaView style={styles.containerHome} edges={['top']}>
       <View>
         <Animatable.Image
           style={styles.logo}
@@ -36,7 +37,7 @@ const HomeScreen = () => {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("Quote")}
+          onPress={() => navigation.navigate("HomeScreen", { screen: "Products" })}
         >
           <Text style={styles.buttontext}>Get A Quote</Text>
         </TouchableOpacity>

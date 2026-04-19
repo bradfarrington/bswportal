@@ -16,7 +16,7 @@ import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-
 import { Ionicons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get("window");
 const IMAGE_WIDTH = screenWidth - 32;
@@ -92,7 +92,7 @@ export default function VisualiserResultScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView scrollEnabled={scrollEnabled} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>

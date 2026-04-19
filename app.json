@@ -21,7 +21,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryAddUsageDescription": "BSW Portal needs access to save your visualiser images to your photo library.",
-        "NSPhotoLibraryUsageDescription": "BSW Portal needs access to your photo library to select images for the visualiser."
+        "NSPhotoLibraryUsageDescription": "BSW Portal needs access to your photo library to select images for the visualiser.",
+        "NSCameraUsageDescription": "BSW Portal needs your camera to take photos of your home."
       }
     },
     "android": {

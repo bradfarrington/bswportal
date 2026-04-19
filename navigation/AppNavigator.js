@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Brochures from "../screens/Brochures";
 import Designer from "../screens/Designer";
 import Portal from "../screens/Portal";
-import Quote from "../screens/Quote";
+import ProductEnquiryScreen from "../screens/ProductEnquiryScreen";
 import SaleCategoriesScreen from "../screens/SaleCategoriesScreen";
 import Orders from "../screens/Portal";
 import Home from "../screens/Home";
@@ -220,6 +220,10 @@ const AppNavigator = () => {
           headerTitleStyle: {
             fontFamily: "RB",
           },
+          headerStyle: {
+            backgroundColor: "#F9F9FB",
+          },
+          headerShadowVisible: false,
         }}
       />
       <Stack.Screen
@@ -234,7 +238,7 @@ const AppNavigator = () => {
             fontSize: 17,
           },
           headerStyle: {
-            backgroundColor: '#fff',
+            backgroundColor: '#F9FAFB',
           },
           headerShadowVisible: false,
         })}
@@ -246,6 +250,10 @@ const AppNavigator = () => {
           headerTitleStyle: {
             fontFamily: "RB",
           },
+          headerStyle: {
+            backgroundColor: "#F9FAFB",
+          },
+          headerShadowVisible: false,
         }}
       />
       <Stack.Screen
@@ -268,7 +276,7 @@ const AppNavigator = () => {
             fontSize: 17,
           },
           headerStyle: {
-            backgroundColor: "#fff",
+            backgroundColor: "#F9F9FB",
           },
           headerShadowVisible: false,
         })}
@@ -284,11 +292,20 @@ const AppNavigator = () => {
         options={{
           title: "AI Visualiser",
           headerTitleStyle: { fontFamily: "RB" },
+          headerStyle: {
+            backgroundColor: "#F9FAFB",
+          },
+          headerShadowVisible: false,
         }}
       />
       <Stack.Screen
         name="VisualiserResult"
         component={VisualiserResultScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ProductEnquiry"
+        component={ProductEnquiryScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

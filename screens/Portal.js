@@ -1,4 +1,5 @@
-import { View, SafeAreaView } from "react-native";
+import { View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useLayoutEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { WebView } from "react-native-webview";
@@ -15,6 +16,7 @@ return (
         flex: 1,
         backgroundColor: "#F9F9FB",
       }}
+      edges={['top']}
     >
       <View style={{ flex: 1, justifyContent: "center" }}>
         <WebView source={{ uri: WEBSITE }} />

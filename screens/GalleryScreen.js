@@ -10,9 +10,9 @@ import {
   Dimensions,
   RefreshControl,
   Platform,
-  SafeAreaView,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -172,7 +172,7 @@ const GalleryScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#F9FAFB' }} edges={['top']}>
         <View style={[styles.searchContainer, isFocused && styles.searchContainerFocused]}>
           <Ionicons name="search" size={22} color={isFocused ? '#e5040a' : '#888'} style={styles.searchIcon} />
           <TextInput

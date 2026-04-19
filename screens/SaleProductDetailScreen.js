@@ -6,8 +6,7 @@ import {
   ScrollView, 
   Dimensions, 
   StyleSheet, 
-  Image,
-  SafeAreaView
+  Image
 } from "react-native";
 import { Ionicons, Feather, FontAwesome } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
@@ -75,7 +74,7 @@ const ProductDetails = (props) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
@@ -178,7 +177,7 @@ const ProductDetails = (props) => {
            <Text style={styles.solidButtonText}>Collect Today</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -6,11 +6,11 @@ import {
   Image, 
   ScrollView, 
   TouchableOpacity, 
-  SafeAreaView, 
   Platform,
   Modal,
   Dimensions 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Feather, AntDesign } from '@expo/vector-icons';
 import axios from 'axios';
 import ImageViewer from 'react-native-image-zoom-viewer';
@@ -18,7 +18,7 @@ import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TABS = ['Overview', 'Details', 'Glass', 'Colours', 'Extras'];
+const TABS = ['Overview', 'Details', 'Styles', 'Glass', 'Colours', 'Hardware', 'Extras'];
 
 export default function CatalogProductDetailsScreen({ route, navigation }) {
   const { product } = route.params;
@@ -113,26 +113,34 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
       if (tab === 'Extras') return product.extras && product.extras.length > 0;
       if (tab === 'Colours') return product.colours && product.colours.length > 0;
       if (tab === 'Glass') return product.glass && product.glass.length > 0;
+      if (tab === 'Styles') return product.styles && product.styles.length > 0;
+      if (tab === 'Hardware') return product.hardware && product.hardware.length > 0;
       return true;
     });
 
     return (
       <View style={styles.tabContainer}>
-        {availableTabs.map((tab) => {
-          const isActive = activeTab === tab;
-          return (
-            <TouchableOpacity 
-              key={tab} 
-              style={[styles.tabButton, isActive && styles.activeTabButton]}
-              onPress={() => {
-                setActiveTab(tab);
-                scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-              }}
-            >
-              <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabScrollContent}
+        >
+          {availableTabs.map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity 
+                key={tab} 
+                style={[styles.tabButton, isActive && styles.activeTabButton]}
+                onPress={() => {
+                  setActiveTab(tab);
+                  scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+                }}
+              >
+                <Text style={[styles.tabText, isActive && styles.activeTabText]}>{tab}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
     );
   };
@@ -309,6 +317,59 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
     </View>
   );
 
+  const renderStyles = () => (
+    <View style={styles.detailsSection}>
+      {product.styles?.map((styleGroup, index) => (
+        <View key={index} style={styles.detailCard}>
+          <Text style={styles.detailTitle}>{styleGroup.title}</Text>
+          <Text style={styles.detailContent}>{styleGroup.content}</Text>
+          {styleGroup.overviewImage && (
+            <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(styleGroup.overviewImage, styleGroup.title)}>
+              <Image source={styleGroup.overviewImage} style={styles.overviewImage} resizeMode={styleGroup.overviewImageMode || "contain"} />
+            </TouchableOpacity>
+          )}
+          {styleGroup.images && styleGroup.images.length > 0 && (
+            <View style={styles.imageGrid}>
+              {styleGroup.images.map((img, i) => (
+                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                  </View>
+                  <Text style={styles.gridLabel}>{img.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      ))}
+      <View style={{ height: 100 }} />
+    </View>
+  );
+
+  const renderHardware = () => (
+    <View style={styles.detailsSection}>
+      {product.hardware?.map((hardwareGroup, index) => (
+        <View key={index} style={styles.detailCard}>
+          <Text style={styles.detailTitle}>{hardwareGroup.title}</Text>
+          <Text style={styles.detailContent}>{hardwareGroup.content}</Text>
+          {hardwareGroup.images && hardwareGroup.images.length > 0 && (
+            <View style={styles.imageGrid}>
+              {hardwareGroup.images.map((img, i) => (
+                <TouchableOpacity key={i} style={styles.imageGridItem} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
+                  <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }]}>
+                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                  </View>
+                  <Text style={styles.gridLabel}>{img.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+      ))}
+      <View style={{ height: 100 }} />
+    </View>
+  );
+
   const renderExtras = () => (
     <View style={styles.detailsSection}>
       {product.extras?.map((extra, index) => (
@@ -337,6 +398,10 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
         return renderOverview();
       case 'Details':
         return renderDetails();
+      case 'Styles':
+        return renderStyles();
+      case 'Hardware':
+        return renderHardware();
       case 'Colours':
         return renderColours();
       case 'Glass':
@@ -349,7 +414,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
         {/* Custom Header */}
         <View style={styles.header}>
@@ -382,7 +447,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           <TouchableOpacity 
             style={styles.ctaButton}
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('Quote')} 
+            onPress={() => navigation.navigate('ProductEnquiry', { product })} 
           >
             <Text style={styles.ctaText}>Enquire Now</Text>
           </TouchableOpacity>
@@ -459,13 +524,14 @@ const styles = StyleSheet.create({
     color: '#111',
   },
   tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: 32,
-    paddingHorizontal: 20,
-    marginBottom: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    marginBottom: 20,
+  },
+  tabScrollContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 28,
   },
   tabButton: {
     paddingVertical: 10,

@@ -548,10 +548,286 @@ export const CATEGORIES = [
     ]
   },
   {
-    id: "composite-doors",
-    title: "Composite Doors",
+    id: "doors",
+    title: "Doors",
     image: require('../assets/composite-doors-category-image.png'),
-    subcategories: []
+    subcategories: [
+      {
+        id: "upvc-doors",
+        title: "uPVC Doors",
+        cardImage: require('../assets/doors/upvc-doors/category-card-image.png'),
+        tagline: "Bespoke uPVC doors, tailored for style and safety.",
+        heroImage: require('../assets/doors/upvc-doors/main-image.png'),
+        about: "Discover a wide array of uPVC doors at Bradley Scott Windows, tailored to suit your unique style and preferences. Our doors come in a variety of frame and door styles, colours, finishes, and glazing options, all customisable to meet your exact requirements.\n\nOur Ultimate Bespoke Doors feature a slimline midrail as standard, ensuring consistent sight lines and proportions across different styles. For those seeking a traditional timber door aesthetic, we offer the Deep Featured Midrail option, closely resembling classic timber door designs and enhancing the overall appearance.",
+        stats: {
+          rating: "4.9",
+          reviews: "699",
+          completed: "1,200+"
+        },
+        priceLabel: "Price on Request",
+        details: [
+          {
+            title: "Frame Styles",
+            content: "Your initial choice revolves around selecting the door profile: either bevelled or ovolo. This decision is typically guided by the property's architectural style or personal taste preferences.\n\nBevelled: The bevelled profile, sometimes referred to as chamfered, offers a crisp aesthetic where the frame meets the glass at an angled straight edge.\n\nOvolo: The ovolo, or sculptured profile, is a favoured option for doors in period-style homes, characterised by curved shapes and softer sightlines.",
+            images: [
+              { image: require('../assets/windows/casement-windows/styles/bevelled-image.jpg'), label: "Bevelled" },
+              { image: require('../assets/windows/casement-windows/styles/ovolo-image.jpg'), label: "Ovolo" },
+            ]
+          },
+          {
+            title: "Security Features",
+            content: "A total of 14 security points around each door, including:\n\u2022 Shoot Bolts\n\u2022 Hook Locks\n\u2022 Dead Locks\n\u2022 Centre Latch\n\u2022 Compression Roller Cams\n\u2022 Anti-jemmy Hinge Bolts\n\u2022 Standard Hinge (Multiple Finishes)\n\u2022 Heritage Only Pencil Hinge",
+            overviewImage: require('../assets/doors/upvc-doors/security-images/DOOR-FULL-IMAGE.png'),
+            images: [
+              { image: require('../assets/doors/upvc-doors/security-images/A-1.png'), label: "Shoot Bolts" },
+              { image: require('../assets/doors/upvc-doors/security-images/B-1.png'), label: "Hook Locks" },
+              { image: require('../assets/doors/upvc-doors/security-images/C-1.png'), label: "Dead Locks" },
+              { image: require('../assets/doors/upvc-doors/security-images/D-1.png'), label: "Centre Latch" },
+              { image: require('../assets/doors/upvc-doors/security-images/E.png'), label: "Compression Roller Cams" },
+              { image: require('../assets/doors/upvc-doors/security-images/F.png'), label: "Anti-jemmy Hinge Bolts" },
+              { image: require('../assets/doors/upvc-doors/security-images/G.png'), label: "Standard Hinge" },
+            ]
+          }
+        ],
+        styles: [
+          {
+            title: "uPVC Door Designs",
+            content: "Our Ultimate Bespoke door collection offers a wide range of panel designs to suit any property style, from contemporary to traditional.",
+            images: [
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/ASSINGTON.png'), label: "Assington" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/BELCHAMP.png'), label: "Belchamp" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/BOXFORD.png'), label: "Boxford" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/BRETT.png'), label: "Brett" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/BURES.png'), label: "Bures" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/CAVENDISH.png'), label: "Cavendish" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/COLNE.png'), label: "Colne" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/CORNARD.png'), label: "Cornard" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/DEPDEN.png'), label: "Depden" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/GOSFIELD.png'), label: "Gosfield" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/HADLEIGH.png'), label: "Hadleigh" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/HARTEST.png'), label: "Hartest" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/HEDINGHAM.png'), label: "Hedingham" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/IKSOWRTH.png'), label: "Ixworth" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/IXWORTH-2.png'), label: "Ixworth 2" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/KERSEY.png'), label: "Kersey" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/LAVENHAM.png'), label: "Lavenham" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/MELFORD.png'), label: "Melford" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/NAYLAND.png'), label: "Nayland" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/NEWTON.png'), label: "Newton" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/PEBMARSH.png'), label: "Pebmarsh" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/POLSTEAD.png'), label: "Polstead" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/STOUR.png'), label: "Stour" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/SUDBURY.png'), label: "Sudbury" },
+              { image: require('../assets/doors/upvc-doors/pvc-door-styles/YELDHAM.png'), label: "Yeldham" },
+            ]
+          }
+        ],
+        hardware: [
+          {
+            title: "Door Handles",
+            content: "When it comes to choosing handles for your doors, we offer a wide range of styles, colours, and finishes to perfectly complement your home's aesthetic. Whether you prefer sleek modern designs or traditional finishes, our selection ensures you'll find the perfect match.",
+            images: [
+              { image: require('../assets/doors/upvc-doors/hardware/handles/white.png'), label: "White" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/BLACK.png'), label: "Black" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/GRAPHITE.png'), label: "Graphite" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/GOLD.png'), label: "Gold" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/CHROME.png'), label: "Chrome" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/SATIN.png'), label: "Satin" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/BRONZE.png'), label: "Bronze" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/PEWTER.png'), label: "Pewter" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/ROSE-GOLD.png'), label: "Rose Gold" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/SWAN-NECK.png'), label: "Swan Neck" },
+              { image: require('../assets/doors/upvc-doors/hardware/handles/PAD-HANDLE.png'), label: "Pad Handle" },
+            ]
+          },
+          {
+            title: "Door Knockers",
+            content: "Complete the look of your door with our range of knocker styles and finishes.",
+            images: [
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Black-knocker.png'), label: "Black" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Graphite-knocker.png'), label: "Graphite" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Gold-knocker.png'), label: "Gold" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Chrome-knocker.png'), label: "Chrome" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Bronze-knocker.png'), label: "Bronze" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Pewter-knocker.png'), label: "Pewter" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Antique-Black-knocker.png'), label: "Antique Black" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Rose-Gold-knocker.png'), label: "Rose Gold" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Forged-Black-knocker.png'), label: "Forged Black" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Urn-and-Slim-Urn-Knocker.png'), label: "Urn Styles" },
+              { image: require('../assets/doors/upvc-doors/hardware/knockers/Spire-Knocker-knocker.png'), label: "Spire Knocker" },
+            ]
+          },
+          {
+            title: "Letterboxes",
+            content: "Choose from a selection of letterbox finishes to match your door hardware.",
+            images: [
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/WHITE-LETTERBOX.png'), label: "White" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/BLACK-LLETERBOX.png'), label: "Black" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/GRAPHITE-LLETERBOX.png'), label: "Graphite" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/GOLD-LLETERBOX.png'), label: "Gold" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/CHROME-LLETERBOX.png'), label: "Chrome" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/SATIN-LLETERBOX.png'), label: "Satin" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/BRONZE-LLETERBOX.png'), label: "Bronze" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/PEWTER-LLETERBOX.png'), label: "Pewter" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/ANTIQUE-BLACK-LLETERBOX.png'), label: "Antique Black" },
+              { image: require('../assets/doors/upvc-doors/hardware/letterboxes/ROSE-GOLD-LLETERBOX.png'), label: "Rose Gold" },
+            ]
+          }
+        ],
+        colours: [
+          {
+            title: "Standard Colours",
+            content: "Whatever style and finish you desire for your doors, the Ultimate Collection provides a wide selection to meet your needs. Our standard colour range is available with short lead times.",
+            swatches: [
+              { image: require('../assets/windows/colours/standard/WHITE.png'), label: "White" },
+              { image: require('../assets/windows/colours/standard/WHITE-GRAIN.png'), label: "White Grain" },
+              { image: require('../assets/windows/colours/standard/ICE-CREAM-GRAINED.png'), label: "Ice Cream Grained" },
+              { image: require('../assets/windows/colours/standard/ICE-CREAM-ON-WHITE.png'), label: "Ice Cream on White" },
+              { image: require('../assets/windows/colours/standard/CHERRYWOOD.png'), label: "Cherrywood" },
+              { image: require('../assets/windows/colours/standard/CHERRYWOOD-ON-WHITE.png'), label: "Cherrywood on White" },
+              { image: require('../assets/windows/colours/standard/ROSEWOOD-2.png'), label: "Rosewood" },
+              { image: require('../assets/windows/colours/standard/ROSEWOOD-ON-WHITE.png'), label: "Rosewood on White" },
+              { image: require('../assets/windows/colours/standard/IRISH-OAK-2.png'), label: "Irish Oak" },
+              { image: require('../assets/windows/colours/standard/ANTHRACITE-GREY-ON-WHITE.png'), label: "Anthracite Grey on White" },
+              { image: require('../assets/windows/colours/standard/BLACK-GRAINED-ON-WHITE.png'), label: "Black Grained on White" },
+            ]
+          },
+          {
+            title: "Extended Lead Time",
+            content: "These colours are available with an extended lead time.",
+            swatches: [
+              { image: require('../assets/windows/colours/extended/ANTHRACITE-GREY.png'), label: "Anthracite Grey" },
+              { image: require('../assets/windows/colours/extended/SMOOTH-ANTHRACITE-GREY.png'), label: "Smooth Anthracite Grey" },
+              { image: require('../assets/windows/colours/extended/SMOOTH-ANTHRACITEE-GREY-ON-WHITE.png'), label: "Smooth Anthracite Grey on White" },
+              { image: require('../assets/windows/colours/extended/ANTHRACITE-GREY-ON-WHITE-GRAINED.png'), label: "Anthracite Grey on White Grained" },
+              { image: require('../assets/windows/colours/extended/AGATE-GREY-ON-WHITE.png'), label: "Agate Grey on White" },
+              { image: require('../assets/windows/colours/extended/AGATE-GREY-ON-WHITE-GRAINED.png'), label: "Agate Grey on White Grained" },
+              { image: require('../assets/windows/colours/extended/FRENCH-GREY-ON-WHITE.png'), label: "French Grey on White" },
+              { image: require('../assets/windows/colours/extended/FRENCH-GREY-ON-WHITE-GRAINED.png'), label: "French Grey on White Grained" },
+              { image: require('../assets/windows/colours/extended/LIGHT-GREY-ON-WHITE.png'), label: "Light Grey on White" },
+              { image: require('../assets/windows/colours/extended/SILVER-GREY-ON-WHITE.png'), label: "Silver Grey on White" },
+              { image: require('../assets/windows/colours/extended/CHARTWELL-GREEN-ON-WHITE.png'), label: "Chartwell Green on White" },
+              { image: require('../assets/windows/colours/extended/IRISH-OAK-ON-WHITE.png'), label: "Irish Oak on White" },
+            ]
+          },
+          {
+            title: "Specials",
+            content: "Special order colours for unique projects. Please note that not all colours are available in every profile type or product range.",
+            swatches: [
+              { image: require('../assets/windows/colours/specials/AGATE-GREY.png'), label: "Agate Grey" },
+              { image: require('../assets/windows/colours/specials/BLACK-1.png'), label: "Black" },
+              { image: require('../assets/windows/colours/specials/BLACK-ON-WHITE-GRAINED.png'), label: "Black on White Grained" },
+              { image: require('../assets/windows/colours/specials/BALMORAL-GREY-ON-WHITE-GRAINED.png'), label: "Balmoral Grey on White Grained" },
+              { image: require('../assets/windows/colours/specials/ICE-CREAM-ON-WHITE-GRAINED.png'), label: "Ice Cream on White Grained" },
+              { image: require('../assets/windows/colours/specials/IVORY-ON-WHITE-GRAINED.png'), label: "Ivory on White Grained" },
+              { image: require('../assets/windows/colours/specials/ROSEWOOD-ON-WHITE-GRAINED.png'), label: "Rosewood on White Grained" },
+            ]
+          }
+        ],
+        extras: [
+          {
+            title: "Optional Deep Midrail",
+            content: "Our Ultimate Bespoke Doors feature a standard slimline midrail that ensures consistent sight lines and proportions across all styles. For those seeking a more traditional look reminiscent of timber doors, select styles in our collection offer the new Deep Featured Midrail option. This deeper midrail closely mirrors the appearance of classic timber door designs.\n\nAdditionally, our Ultimate Bespoke doors provide flexibility with midrail options, including the 3-section 168mm Midrail or the 1-section Deep Timber Look 195mm Midrail."
+          },
+          {
+            title: "Timber Look Joints",
+            content: "Achieve an authentic timber appearance with Ultimate Heritage doors, featuring the option of Genus timber-look joints. These joints replicate traditional butt joints found on timber doors, providing an alternative to 45° welded joints."
+          },
+          {
+            title: "Optional Deep Timber Look Cill",
+            content: "Enhance the timber aesthetic with Ultimate Bespoke Doors, offering the choice of a deeper, timber-look PVC-u cill. This option completes the traditional timber look with proportions deeper than standard PVC-u cills."
+          },
+          {
+            title: "Glazing Options",
+            content: "Our door range offers flexible glazing options that allow you to create a new, contemporary look or preserve a classic, authentic style. Options include plain glass, obscured glass, coloured glass, etched glass, leaded designs, and bevelled designs, each with numerous variations to suit the style of your project."
+          },
+          {
+            title: "Authentic Astragal Georgian Bar",
+            content: "Our authentic astragal clip-on Georgian Bar design instantly creates a period look. The bars are fixed to full-length aluminium backing strips, ensuring they remain straight and true over time.",
+            image: require('../assets/windows/EXTRAS/GEORGIAN-BAR-EXTERNAL.jpg')
+          },
+          {
+            title: "Decorative Glass",
+            content: "Coloured and bevelled glass designs offer a traditional appearance, while simpler etched glass designs provide a contemporary feel. The dimensions of these glass patterns can be tailored to suit any door style, with options for half, dual, and full-height glazed panels."
+          }
+        ],
+        galleryAlbumName: "uPVC Doors",
+        subcategories: []
+      },
+      {
+        id: "composite-doors",
+        title: "Composite Doors",
+        cardImage: require('../assets/composite-doors-category-image.png'),
+        subcategories: []
+      },
+      {
+        id: "bi-fold-doors",
+        title: "Bi-Fold Doors",
+        cardImage: require('../assets/bi-fold-doors-category-image.png'),
+        tagline: "Aluminium Bi-fold doors",
+        heroImage: require('../assets/doors/bi-fold-doors/main-image.jpg'),
+        about: "Available in various configurations with up to 6 door panels, you can choose a design where all panels stack to one side or split them to stack in both directions.\n\nYou also have the option to select whether the doors open inwards or outwards. For added convenience, designs featuring a single traffic door allow easy access to your garden without needing to move the other panels.\n\nEnjoy super slim frames for enhanced natural light and neatly folding doors for a fully maximized opening.",
+        stats: {
+          rating: "4.9",
+          reviews: "699",
+          completed: "1,200+"
+        },
+        priceLabel: "Price on Request",
+        details: [
+          {
+            title: "Door Configurations & Features",
+            content: "Available in various configurations with up to 6 door panels, you can choose a design where all panels stack to one side or split them to stack in both directions.\n\nFeatures:\n\u2022 Super Slim frames for enhanced natural light\n\u2022 Neatly folding doors for a fully maximized opening\n\u2022 Built to meet British and European security standards\n\u2022 Standard 6-point locking system (optional hook lock: 2 hooks, 1 deadbolt, 1 latch)\n\u2022 Choose between inward or outward opening\n\u2022 Water-resistant up to 600 Pa\n\u2022 Configurable with up to 6 door panels\n\u2022 Maximum height of 2412 mm\n\u2022 Door panel widths up to 1200 mm",
+            images: []
+          },
+          {
+            title: "Styles",
+            content: "We offer a variety of styles to perfectly match your home's aesthetic.",
+            overviewImage: require('../assets/doors/bi-fold-doors/styles/styles-image.png'),
+            overviewImageMode: 'contain'
+          },
+          {
+            title: "Threshold Options",
+            content: "Four threshold options to suit your needs, providing optimal weather resistance and easy access.",
+            overviewImage: require('../assets/doors/bi-fold-doors/styles/threshold-types/Level-3.png'),
+            overviewImageMode: 'contain'
+          },
+          {
+            title: "Standard Handles",
+            content: "Choose from a range of premium handle finishes to complement your bi-fold doors.",
+            images: [
+              { image: require('../assets/doors/bi-fold-doors/hardware/white_door_handle.jpg'), label: "White" },
+              { image: require('../assets/doors/bi-fold-doors/hardware/black_handles.jpg'), label: "Black" },
+              { image: require('../assets/doors/bi-fold-doors/hardware/Anthracit_-Grey.jpg'), label: "Anthracite Grey" },
+              { image: require('../assets/doors/bi-fold-doors/hardware/Polished_Chrome.jpg'), label: "Polished Chrome" },
+              { image: require('../assets/doors/bi-fold-doors/hardware/Satin_Chrome.jpg'), label: "Satin Chrome" },
+              { image: require('../assets/doors/bi-fold-doors/hardware/graphite.jpg'), label: "Graphite" },
+            ]
+          }
+        ],
+        colours: [
+          {
+            title: "Standard Colours",
+            content: "Our standard colour range is available with short lead times.",
+            swatches: [
+              { image: require('../assets/windows/aluminium-windows/colours/standard/WHITE-9016.png'), label: "White 9016" },
+              { image: require('../assets/windows/aluminium-windows/colours/standard/BLACK-9005.png'), label: "Black 9005" },
+              { image: require('../assets/windows/aluminium-windows/colours/standard/GREY-7016.png'), label: "Grey 7016" }
+            ]
+          },
+          {
+            title: "Extended Lead Time",
+            content: "These colours are available with an extended lead time.",
+            swatches: [
+              { image: require('../assets/windows/aluminium-windows/colours/extended/AGATE-GREY-EXTERNAL-WHITE-INTERNAL-qznye980s7mkkzzck0r4wvjt5ym2kyh7gxoq67s4iw.png'), label: "Agate Grey / White" },
+              { image: require('../assets/windows/aluminium-windows/colours/extended/BLACK-EXTERNAL-WHITE-INTERNAL-qznye980s7mkkzzck0r4wvjt5ym2kyh7gxoq67s4iw.png'), label: "Black / White" },
+              { image: require('../assets/windows/aluminium-windows/colours/extended/FRENCH-GREY-EXTERNAL-WHITE-INTERNAL-qznyea5uz1nuwlxzej5rhdb9rchfsnkxt2c7nhqqco.png'), label: "French Grey / White" },
+              { image: require('../assets/windows/aluminium-windows/colours/extended/GREY-EXTERNAL-WHITE-INTERNAL-qznyea5uz1nuwlxzej5rhdb9rchfsnkxt2c7nhqqco.png'), label: "Grey / White" }
+            ]
+          }
+        ],
+        galleryAlbumName: "Aluminium Bi-fold Doors"
+      }
+    ]
   },
   {
     id: "roof-lanterns",
@@ -892,75 +1168,7 @@ export const CATEGORIES = [
       }
     ]
   },
-  {
-    id: "bi-fold-doors",
-    title: "Bi-Fold Doors",
-    image: require('../assets/bi-fold-doors-category-image.png'),
-    cardImage: require('../assets/bi-fold-doors-category-image.png'),
-    tagline: "Aluminium Bi-fold doors",
-    heroImage: require('../assets/doors/bi-fold-doors/main-image.jpg'),
-    about: "Available in various configurations with up to 6 door panels, you can choose a design where all panels stack to one side or split them to stack in both directions.\n\nYou also have the option to select whether the doors open inwards or outwards. For added convenience, designs featuring a single traffic door allow easy access to your garden without needing to move the other panels.\n\nEnjoy super slim frames for enhanced natural light and neatly folding doors for a fully maximized opening.",
-    stats: {
-      rating: "4.9",
-      reviews: "699",
-      completed: "1,200+"
-    },
-    priceLabel: "Price on Request",
-    subcategories: [],
-    details: [
-      {
-        title: "Door Configurations & Features",
-        content: "Available in various configurations with up to 6 door panels, you can choose a design where all panels stack to one side or split them to stack in both directions.\n\nFeatures:\n\u2022 Super Slim frames for enhanced natural light\n\u2022 Neatly folding doors for a fully maximized opening\n\u2022 Built to meet British and European security standards\n\u2022 Standard 6-point locking system (optional hook lock: 2 hooks, 1 deadbolt, 1 latch)\n\u2022 Choose between inward or outward opening\n\u2022 Water-resistant up to 600 Pa\n\u2022 Configurable with up to 6 door panels\n\u2022 Maximum height of 2412 mm\n\u2022 Door panel widths up to 1200 mm",
-        images: []
-      },
-      {
-        title: "Styles",
-        content: "We offer a variety of styles to perfectly match your home's aesthetic.",
-        overviewImage: require('../assets/doors/bi-fold-doors/styles/styles-image.png'),
-        overviewImageMode: 'contain'
-      },
-      {
-        title: "Threshold Options",
-        content: "Four threshold options to suit your needs, providing optimal weather resistance and easy access.",
-        overviewImage: require('../assets/doors/bi-fold-doors/styles/threshold-types/Level-3.png'),
-        overviewImageMode: 'contain'
-      },
-      {
-        title: "Standard Handles",
-        content: "Choose from a range of premium handle finishes to complement your bi-fold doors.",
-        images: [
-          { image: require('../assets/doors/bi-fold-doors/hardware/white_door_handle.jpg'), label: "White" },
-          { image: require('../assets/doors/bi-fold-doors/hardware/black_handles.jpg'), label: "Black" },
-          { image: require('../assets/doors/bi-fold-doors/hardware/Anthracit_-Grey.jpg'), label: "Anthracite Grey" },
-          { image: require('../assets/doors/bi-fold-doors/hardware/Polished_Chrome.jpg'), label: "Polished Chrome" },
-          { image: require('../assets/doors/bi-fold-doors/hardware/Satin_Chrome.jpg'), label: "Satin Chrome" },
-          { image: require('../assets/doors/bi-fold-doors/hardware/graphite.jpg'), label: "Graphite" },
-        ]
-      }
-    ],
-    colours: [
-      {
-        title: "Standard Colours",
-        content: "Our standard colour range is available with short lead times.",
-        swatches: [
-          { image: require('../assets/windows/aluminium-windows/colours/standard/WHITE-9016.png'), label: "White 9016" },
-          { image: require('../assets/windows/aluminium-windows/colours/standard/BLACK-9005.png'), label: "Black 9005" },
-          { image: require('../assets/windows/aluminium-windows/colours/standard/GREY-7016.png'), label: "Grey 7016" }
-        ]
-      },
-      {
-        title: "Extended Lead Time",
-        content: "These colours are available with an extended lead time.",
-        swatches: [
-          { image: require('../assets/windows/aluminium-windows/colours/extended/AGATE-GREY-EXTERNAL-WHITE-INTERNAL-qznye980s7mkkzzck0r4wvjt5ym2kyh7gxoq67s4iw.png'), label: "Agate Grey / White" },
-          { image: require('../assets/windows/aluminium-windows/colours/extended/BLACK-EXTERNAL-WHITE-INTERNAL-qznye980s7mkkzzck0r4wvjt5ym2kyh7gxoq67s4iw.png'), label: "Black / White" },
-          { image: require('../assets/windows/aluminium-windows/colours/extended/FRENCH-GREY-EXTERNAL-WHITE-INTERNAL-qznyea5uz1nuwlxzej5rhdb9rchfsnkxt2c7nhqqco.png'), label: "French Grey / White" },
-          { image: require('../assets/windows/aluminium-windows/colours/extended/GREY-EXTERNAL-WHITE-INTERNAL-qznyea5uz1nuwlxzej5rhdb9rchfsnkxt2c7nhqqco.png'), label: "Grey / White" }
-        ]
-      }
-    ],
-    galleryAlbumName: "Aluminium Bi-fold Doors"
-  },
+
   {
     id: "skyrooms",
     title: "Skyrooms",

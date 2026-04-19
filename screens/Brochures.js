@@ -10,9 +10,9 @@ import {
   Alert,
   TextInput,
   ScrollView,
-  ImageBackground,
-  SafeAreaView
+  ImageBackground
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AntDesign, Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import * as FileSystem from "expo-file-system";
@@ -225,7 +225,7 @@ const Brochures = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9FB" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9F9FB" }} edges={['top']}>
       <View style={style.headerContainer}>
         <View style={style.topRow}>
              <TouchableOpacity style={style.backBtn} onPress={() => navigate("HomeScreen")}>

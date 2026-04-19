@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CATEGORIES } from '../data/ProductsData';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -50,7 +51,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Our Products</Text>
       </View>
@@ -61,7 +62,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
         {/* ROW 1: Vertical Door + 2 Squares */}
         <View style={styles.bentoRowTall}>
           <BentoCard 
-            item={getItem('composite-doors')} 
+            item={getItem('doors')} 
             style={[styles.bentoVertical, { marginRight: 16 }]} 
             titleStyle={styles.titleVertical}
           />
@@ -71,12 +72,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ROW 2: Wide Horizontal (Bi-fold doors) */}
-        <View style={styles.bentoRowWide}>
-          <BentoCard item={getItem('bi-fold-doors')} style={styles.bentoHorizontal} />
-        </View>
-
-        {/* ROW 3: 2 Squares + Vertical Commercial */}
+        {/* ROW 2: 2 Squares + Vertical Commercial */}
         <View style={styles.bentoRowTall}>
           <View style={[styles.bentoColumn, { marginRight: 16 }]}>
             <BentoCard item={getItem('repairs')} style={[styles.bentoSquare, { marginBottom: 16 }]} />

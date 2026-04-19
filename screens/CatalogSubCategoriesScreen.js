@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ImageBackground, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ImageBackground } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function CatalogSubCategoriesScreen({ route, navigation }) {
@@ -35,7 +35,7 @@ export default function CatalogSubCategoriesScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <FlatList 
         data={category.subcategories}
         keyExtractor={(item) => item.id}
@@ -45,7 +45,7 @@ export default function CatalogSubCategoriesScreen({ route, navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
