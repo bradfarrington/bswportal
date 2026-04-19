@@ -1,10 +1,10 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, Image, TextInput, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CATEGORIES } from '../data/ProductsData';
+import { loadCategories } from '../data/ProductsData';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -40,10 +40,15 @@ const heroSlides = [
   
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState([]);
   
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isTabletDynamic = windowWidth >= 768;
   const isLandscape = windowWidth > windowHeight;
+
+  useEffect(() => {
+    loadCategories().then(data => setCategories(data || []));
+  }, []);
 
   const allProducts = useMemo(() => {
     let products = [];
@@ -56,7 +61,7 @@ const heroSlides = [
         }
       });
     };
-    extractProducts(CATEGORIES);
+    extractProducts(categories);
 
     // Deduplicate by title to remove doubled items like 'Roof Lanterns'
     const uniqueProducts = [];
@@ -69,7 +74,7 @@ const heroSlides = [
     });
 
     return uniqueProducts;
-  }, []);
+  }, [categories]);
 
   const APP_PAGES = useMemo(() => [
     { id: 'page-visualiser', title: 'AI Window Visualiser', type: 'Feature', image: require('../assets/visualiser-card-img.jpg'), icon: 'image', route: 'VisualiserScreen' },
@@ -376,7 +381,7 @@ const heroSlides = [
                   showsHorizontalScrollIndicator={false} 
                   contentContainerStyle={[styles.categoriesContent, isTabletDynamic && isLandscape && { paddingHorizontal: 0 }]}
                 >
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                      <TouchableOpacity key={cat.id} style={[styles.categoryItem, isTabletDynamic && isLandscape && { marginRight: 20 }]} onPress={() => handleCategoryPress(cat)}>
                         <View style={[styles.catImageProps, isTabletDynamic && isLandscape && { width: 175, height: 175 }]}>
                           <Image source={cat.image} style={styles.catImage} />

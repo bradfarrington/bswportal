@@ -1,10 +1,24 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CATEGORIES } from '../data/ProductsData';
+import { loadCategories } from '../data/ProductsData';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export default function CatalogCategoriesScreen({ navigation }) {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadCategories()
+      .then(data => {
+        setCategories(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load categories:', err);
+        setLoading(false);
+      });
+  }, []);
 
   const handleCategoryPress = (category) => {
     if (!category) return;
@@ -24,7 +38,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
     }
   };
 
-  const getItem = (id) => CATEGORIES.find(c => c.id === id);
+  const getItem = (id) => categories.find(c => c.id === id);
 
   const BentoCard = ({ item, style, titleStyle }) => {
     if (!item) return null;
@@ -49,6 +63,19 @@ export default function CatalogCategoriesScreen({ navigation }) {
       </TouchableOpacity>
     );
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Our Products</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E5040A" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -113,6 +140,11 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 100, // accommodate tab bar
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   // BENTO GRID STYLES
   bentoRowTall: {
