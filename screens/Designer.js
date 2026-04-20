@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, DeviceEventEmitter, Text, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, Image, Dimensions, Platform, TextInput, Modal,
   KeyboardAvoidingView, Alert, LayoutAnimation, UIManager, Animated,
   useWindowDimensions,
@@ -24,7 +24,6 @@ import {
   loadAllDesignerData, getStylesForRange,
   WIZARD_STEPS as LOCAL_WIZARD_STEPS,
 } from '../data/DoorDesignerData';
-import DoorVisualiserModal from '../components/DoorVisualiserModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -109,7 +108,7 @@ const collectStepImageUrls = (stepId, jobData, localDataRef) => {
   return [...new Set(urls)];
 };
 
-const Designer = () => {
+const Designer = ({ navigation, route }) => {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isTabletDevice = windowWidth >= 768;
   const isLandscapeMode = windowWidth > windowHeight;
@@ -152,8 +151,24 @@ const Designer = () => {
   const [viewedFromInside, setViewedFromInside] = useState(false);
 
   // Door Visualiser
-  const [showDoorVisualiser, setShowDoorVisualiser] = useState(false);
+  // Removed showDoorVisualiser in favor of unified WindowDesignScreen
   const [viewOnHomeImage, setViewOnHomeImage] = useState(null);
+
+
+  // Wait for returned parameter from WindowDesignScreen
+  useEffect(() => {
+    if (route.params?.capturedVisualiserImage) {
+      const base64Uri = route.params.capturedVisualiserImage;
+      const base64Data = base64Uri && base64Uri.startsWith('data:image') 
+          ? base64Uri.split(",")[1] 
+          : base64Uri;
+      setViewOnHomeImage(base64Data);
+      setEnquirySuccess(false);
+      setShowEnquiry(true);
+      // Consume the parameter
+      navigation.setParams({ capturedVisualiserImage: undefined });
+    }
+  }, [route.params?.capturedVisualiserImage]);
 
   // Refs
   const stepsScrollRef = useRef(null);
@@ -564,7 +579,7 @@ const Designer = () => {
       Alert.alert('Error', 'No door design available to view.');
       return;
     }
-    setShowDoorVisualiser(true);
+    navigation.navigate('WindowDesignScreen', { newDoorSvgHtml: baseSvgHtml, returnToDesigner: true });
   };
 
   // Submit enquiry via Supabase Edge Function (SMTP email)
@@ -1472,32 +1487,65 @@ const Designer = () => {
               <Text style={styles.finishSecondaryText}>{downloading ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.finishActionsRow}>
+          {route.params?.fromVisualiser ? (
             <TouchableOpacity
-              style={[styles.finishSecondaryBtn, { borderColor: '#e5040a', backgroundColor: '#FEF2F2' }]}
-              onPress={handleViewOnHome}
-              disabled={selecting}
-              activeOpacity={0.7}
+              style={styles.enquiryButton}
+              onPress={() => {
+                const doorSpecPayload = {
+                  doorStyle: getSelectedDescription(job, OptionCategories.DoorDesign),
+                  externalColour: getSelectedDescription(job, OptionCategories.DoorColourExternal),
+                  internalColour: getSelectedDescription(job, OptionCategories.DoorColourInternal),
+                  frameColour: getSelectedDescription(job, OptionCategories.FrameColour),
+                  glass: getSelectedDescription(job, OptionCategories.DoorGlass),
+                  handle: getSelectedDescription(job, OptionCategories.HardwareHandle),
+                  letterplate: getSelectedDescription(job, OptionCategories.HardwareLetterplate),
+                  knocker: getSelectedDescription(job, OptionCategories.HardwareKnocker),
+                };
+                DeviceEventEmitter.emit('onReturnDoor', { baseSvgHtml, doorSpec: doorSpecPayload });
+                navigation.goBack();
+              }}
+              activeOpacity={0.85}
             >
-              <Feather name="home" size={16} color="#e5040a" />
-              <Text style={[styles.finishSecondaryText, { color: '#e5040a' }]}>View on Home</Text>
+              <LinearGradient
+                colors={['#e5040a', '#B80008']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.enquiryButtonGradient}
+              >
+                <Feather name="plus-circle" size={16} color="#fff" style={{ marginRight: 10 }} />
+                <Text style={styles.enquiryButtonText}>Add to Visualiser</Text>
+              </LinearGradient>
             </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={styles.enquiryButton}
-            onPress={() => { setEnquirySuccess(false); setShowEnquiry(true); }}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={['#e5040a', '#B80008']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.enquiryButtonGradient}
-            >
-              <Feather name="send" size={16} color="#fff" style={{ marginRight: 10 }} />
-              <Text style={styles.enquiryButtonText}>Send Enquiry</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          ) : (
+            <>
+              <View style={styles.finishActionsRow}>
+                <TouchableOpacity
+                  style={[styles.finishSecondaryBtn, { borderColor: '#e5040a', backgroundColor: '#FEF2F2' }]}
+                  onPress={handleViewOnHome}
+                  disabled={selecting}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="home" size={16} color="#e5040a" />
+                  <Text style={[styles.finishSecondaryText, { color: '#e5040a' }]}>View on Home</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={styles.enquiryButton}
+                onPress={() => { setEnquirySuccess(false); setShowEnquiry(true); }}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#e5040a', '#B80008']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.enquiryButtonGradient}
+                >
+                  <Feather name="send" size={16} color="#fff" style={{ marginRight: 10 }} />
+                  <Text style={styles.enquiryButtonText}>Send Enquiry</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     );
@@ -1753,26 +1801,6 @@ const Designer = () => {
       {/* Enquiry Modal */}
       {renderEnquiryModal()}
 
-      {/* Door Visualiser Modal */}
-      <DoorVisualiserModal
-        visible={showDoorVisualiser}
-        doorSvgHtml={baseSvgHtml}
-        onClose={() => setShowDoorVisualiser(false)}
-        onSaveEnquiryImage={(base64Uri) => {
-          // base64Uri is returned from the visualiser when they've aligned their door
-          // We extract just the base64 payload to be compliant with our generic Edge Function format.
-          const base64Data = base64Uri && base64Uri.startsWith('data:image') 
-              ? base64Uri.split(",")[1] 
-              : null;
-          
-          if (base64Data) {
-              setViewOnHomeImage(base64Data);
-          }
-          // Note: The UI just returns the image internally, we don't necessarily pop the enquiry directly,
-          // user clicks the "Send Enquiry" button which now picks up the saved `viewOnHomeImage`.
-          Alert.alert("Success", "Your view on home preview is attached to your enquiry.");
-        }}
-      />
     </View>
   );
 };
