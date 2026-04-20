@@ -27,7 +27,7 @@ export const prepareImageForUpload = async (imageUri) => {
  * Uses base64 JSON body instead of FormData for reliable RN networking.
  */
 export const generateVisualiserImage = async (imageUri, options) => {
-  const { windowColor, doorColor, style } = options;
+  const { windowColor, doorColor, style, customPrompt } = options;
   
   if (!windowColor) {
     throw new Error("Window Colour is required");
@@ -49,6 +49,7 @@ export const generateVisualiserImage = async (imageUri, options) => {
       windowColor,
       doorColor: doorColor || null,
       style: style || null,
+      customPrompt: customPrompt || null,
     };
 
     console.log(`[Visualiser] Sending to: ${BACKEND_URL}`);

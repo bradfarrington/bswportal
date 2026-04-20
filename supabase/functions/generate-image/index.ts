@@ -6,13 +6,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-function buildPrompt(windowColor: string, doorColor?: string, style?: string): string {
-  let prompt = `This is a photo of a real house. Make a minimal, surgical edit: recolour ONLY the window frames (the UPVC or timber surrounds of each glass window pane) to ${windowColor}. `;
+function buildPrompt(windowColor: string, doorColor?: string, style?: string, customPrompt?: string): string {
+  let prompt = `This is a photo of a real house. Make a minimal, surgical edit: recolour ONLY the window frames (the UPVC or timber surrounds of glass window panes) to ${windowColor}. `;
 
   if (doorColor) {
-    prompt += `Also recolour ONLY the front door panel to ${doorColor}. `;
-  } else {
-    prompt += "Do NOT change the front door, door frame, door surround, or door threshold in any way — they must stay their original colour. ";
+    prompt += `Also recolour the front door panel to ${doorColor}, and recolour the front door frame/surround to match the new window frame colour (${windowColor}). `;
   }
 
   if (style === "Modern") {
@@ -21,16 +19,24 @@ function buildPrompt(windowColor: string, doorColor?: string, style?: string): s
     prompt += "Give the window frames a traditional profile. ";
   }
 
+  if (customPrompt) {
+    prompt += `Additionally, follow these specific user instructions: ${customPrompt}. `;
+  }
+
   prompt +=
-    "CRITICAL: Every single pixel outside the window frames must remain IDENTICAL to the original photo. " +
+    "CRITICAL: Every single pixel outside the targeted elements must remain IDENTICAL to the original photo. " +
     "Do NOT alter, add, remove, or reimagine any of the following: " +
-    "the front door, door frame, door surround, door threshold, " +
     "the driveway, ground, path, pavement, tarmac, gravel, grass, lawn, garden, plants, bushes, trees, " +
     "fascia boards, soffits, guttering, downpipes, bargeboards, roof tiles, chimney, " +
     "brickwork, render, walls, porch, canopy, garage door, fences, gates, bins, cars, " +
-    "sky, clouds, lighting, shadows, reflections, or any background elements. " +
-    "Window frames means ONLY the frames around glass window panes — NOT the door frame. " +
-    "The edit must be so subtle that if you cover the window frames, the rest of the image looks pixel-for-pixel identical to the original. " +
+    "sky, clouds, lighting, shadows, reflections, or any background elements. ";
+
+  if (!doorColor) {
+     prompt += "Do NOT change the front door, door frame, or door surround in any way — they must stay their original colour. ";
+  }
+
+  prompt +=
+    "The edit must be so subtle that if you cover the changed elements, the rest of the image looks pixel-for-pixel identical to the original. " +
     "Photorealistic result, same camera angle, same lighting, same composition.";
 
   return prompt;
@@ -42,7 +48,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageBase64, windowColor, doorColor, style } = await req.json();
+    const { imageBase64, windowColor, doorColor, style, customPrompt } = await req.json();
 
     if (!imageBase64 || !windowColor) {
       return new Response(
@@ -67,7 +73,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const prompt = buildPrompt(windowColor, doorColor ?? undefined, style ?? undefined);
+    const prompt = buildPrompt(windowColor, doorColor ?? undefined, style ?? undefined, customPrompt ?? undefined);
     console.log("Prompt:", prompt);
 
     // Build multipart form for OpenAI's /v1/images/edits endpoint

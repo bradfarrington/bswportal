@@ -24,6 +24,7 @@ import {
   loadAllDesignerData, getStylesForRange,
   WIZARD_STEPS as LOCAL_WIZARD_STEPS,
 } from '../data/DoorDesignerData';
+import DoorVisualiserModal from '../components/DoorVisualiserModal';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -149,6 +150,10 @@ const Designer = () => {
 
   // View toggle
   const [viewedFromInside, setViewedFromInside] = useState(false);
+
+  // Door Visualiser
+  const [showDoorVisualiser, setShowDoorVisualiser] = useState(false);
+  const [viewOnHomeImage, setViewOnHomeImage] = useState(null);
 
   // Refs
   const stepsScrollRef = useRef(null);
@@ -554,6 +559,14 @@ const Designer = () => {
     setDownloading(false);
   };
 
+  const handleViewOnHome = async () => {
+    if (!job?.SVG) {
+      Alert.alert('Error', 'No door design available to view.');
+      return;
+    }
+    setShowDoorVisualiser(true);
+  };
+
   // Submit enquiry via Supabase Edge Function (SMTP email)
   const handleSubmitEnquiry = async () => {
     if (!enquiryForm.name.trim() || !enquiryForm.email.trim()) {
@@ -661,7 +674,13 @@ const Designer = () => {
 
       outsideImageUrl = await uploadImage(doorImagesRef.current.outside, 'outside');
       insideImageUrl = await uploadImage(doorImagesRef.current.inside, 'inside');
-      console.log('[DoorDesigner] Image URLs:', { outsideImageUrl, insideImageUrl });
+      
+      let viewOnHomeImageUrl = null;
+      if (viewOnHomeImage) {
+        viewOnHomeImageUrl = await uploadImage(viewOnHomeImage, 'view-on-home');
+      }
+
+      console.log('[DoorDesigner] Image URLs:', { outsideImageUrl, insideImageUrl, viewOnHomeImageUrl });
 
       const SUPABASE_URL = 'https://kmrfnaurkbmkkoumfnxp.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcmZuYXVya2Jta2tvdW1mbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNjY4NTAsImV4cCI6MjA5MTg0Mjg1MH0.V64OETndBlnMMn7ymtv2M3e5GmX3ROk1FwbIaC1_N1k';
@@ -680,6 +699,7 @@ const Designer = () => {
           feedback: enquiryForm.feedback,
           outsideImageUrl,
           insideImageUrl,
+          viewOnHomeImageUrl,
           doorSpec: {
             doorStyle: getSelectedDescription(job, OptionCategories.DoorDesign),
             externalColour: getSelectedDescription(job, OptionCategories.DoorColourExternal),
@@ -815,6 +835,89 @@ const Designer = () => {
 
   // -- RENDER FUNCTIONS --
 
+  const baseSvgHtml = React.useMemo(() => {
+    if (!job?.SVG) return null;
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+          body { display: flex; justify-content: center; align-items: flex-start; height: 100%; }
+          #container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; }
+          svg { display: block; max-width: 100%; max-height: 100%; }
+        </style>
+      </head>
+      <body>
+        <div id="container">${job.SVG}</div>
+      </body>
+      <script>
+        (function() {
+          var svg = document.querySelector('svg');
+          if (!svg) return;
+
+          var isInside = ${viewedFromInside};
+          if (isInside) {
+            function hideKnockers() {
+              var namedKnockers = document.querySelectorAll('[id*="knocker" i], [id*="Knocker" i], [id*="KNOCKER" i]');
+              namedKnockers.forEach(function(node) {
+                node.style.display = 'none';
+              });
+
+              var knockerImageId = '${(() => {
+                if (!job?.Headings) return '';
+                const knockerHeading = job.Headings.find(h => h.HeadingTypeID === 19);
+                if (!knockerHeading || !knockerHeading.OptionSelectedID || knockerHeading.OptionSelectedID === EMPTY_GUID_VALUE) return '';
+                const selectedOpt = knockerHeading.Options?.find(o => o.ID === knockerHeading.OptionSelectedID);
+                if (!selectedOpt?.StoredImageID || selectedOpt.StoredImageID === EMPTY_GUID_VALUE) return '';
+                return selectedOpt.StoredImageID;
+              })()}';
+              
+              if (knockerImageId) {
+                var images = document.querySelectorAll('image');
+                images.forEach(function(img) {
+                  var href = img.getAttribute('href') || img.getAttribute('xlink:href') || '';
+                  if (href.indexOf(knockerImageId) !== -1) {
+                    img.style.display = 'none';
+                  }
+                });
+              }
+            }
+            
+            hideKnockers();
+            setTimeout(hideKnockers, 500);
+            setTimeout(hideKnockers, 1200);
+          }
+
+          svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+          function crop() {
+            try {
+              var bbox = svg.getBBox();
+              if (bbox.width > 0 && bbox.height > 0) {
+                var pad = 2;
+                svg.setAttribute('viewBox',
+                  (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' +
+                  (bbox.width + pad*2) + ' ' + (bbox.height + pad*2)
+                );
+                svg.style.width = '100%';
+                svg.style.height = '100%';
+              }
+            } catch(e) {}
+          }
+          crop();
+          setTimeout(crop, 300);
+          setTimeout(function() {
+            crop();
+            window.ReactNativeWebView.postMessage('PREVIEW_RENDERED');
+          }, 1000);
+        })();
+      </script>
+      </html>
+    `;
+  }, [job, viewedFromInside]);
+
   const renderStepIndicator = () => (
     <View style={styles.stepsContainer}>
       <ScrollView
@@ -859,7 +962,7 @@ const Designer = () => {
   );
 
   const renderDoorPreview = () => {
-    if (!job?.SVG) {
+    if (!baseSvgHtml) {
       return (
         <View style={styles.previewPlaceholder}>
           <Feather name="home" size={48} color="#D1D5DB" />
@@ -870,98 +973,15 @@ const Designer = () => {
       );
     }
 
-    const svgHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { width: 100%; height: 100%; overflow: hidden; background: #fff; }
-          body { display: flex; justify-content: center; align-items: flex-start; height: 100%; }
-          #container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-start; }
-          svg { display: block; max-width: 100%; max-height: 100%; }
-        </style>
-      </head>
-      <body>
-        <div id="container">${job.SVG}</div>
-      </body>
-      <script>
-        (function() {
-          var svg = document.querySelector('svg');
-          if (!svg) return;
-
-          var isInside = ${viewedFromInside};
-          if (isInside) {
-            function hideKnockers() {
-              // Method 1: Hide any SVG group/element explicitly named knocker
-              var namedKnockers = document.querySelectorAll('[id*="knocker" i], [id*="Knocker" i], [id*="KNOCKER" i]');
-              namedKnockers.forEach(function(node) {
-                node.style.display = 'none';
-              });
-
-              // Method 2: Match knocker by its actual stored image URL from the API data
-              var knockerImageId = '${(() => {
-                if (!job?.Headings) return '';
-                const knockerHeading = job.Headings.find(h => h.HeadingTypeID === 19);
-                if (!knockerHeading || !knockerHeading.OptionSelectedID || knockerHeading.OptionSelectedID === EMPTY_GUID_VALUE) return '';
-                const selectedOpt = knockerHeading.Options?.find(o => o.ID === knockerHeading.OptionSelectedID);
-                if (!selectedOpt?.StoredImageID || selectedOpt.StoredImageID === EMPTY_GUID_VALUE) return '';
-                return selectedOpt.StoredImageID;
-              })()}';
-              
-              if (knockerImageId) {
-                var images = document.querySelectorAll('image');
-                images.forEach(function(img) {
-                  var href = img.getAttribute('href') || img.getAttribute('xlink:href') || '';
-                  if (href.indexOf(knockerImageId) !== -1) {
-                    img.style.display = 'none';
-                  }
-                });
-              }
-            }
-            
-            // Run immediately and after images have loaded
-            hideKnockers();
-            setTimeout(hideKnockers, 500);
-            setTimeout(hideKnockers, 1200);
-          }
-
-          // Force preserveAspectRatio for proper scaling
-          svg.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-          // Try to crop the viewBox to just the content
-          function crop() {
-            try {
-              var bbox = svg.getBBox();
-              if (bbox.width > 0 && bbox.height > 0) {
-                var pad = 2;
-                svg.setAttribute('viewBox',
-                  (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' +
-                  (bbox.width + pad*2) + ' ' + (bbox.height + pad*2)
-                );
-                svg.style.width = '100%';
-                svg.style.height = '100%';
-              }
-            } catch(e) {}
-          }
-          // Try immediately and after a delay for images
-          crop();
-          setTimeout(crop, 300);
-          setTimeout(function() {
-            crop();
-            window.ReactNativeWebView.postMessage('PREVIEW_RENDERED');
-          }, 1000);
-        })();
-      </script>
-      </html>
-    `;
-
     return (
-      <View style={styles.previewContainer} ref={previewContainerRef} collapsable={false}>
-        <WebView
-          ref={svgWebViewRef}
-          source={{ html: svgHtml, baseUrl: IMAGE_BASE_URL + '/' }}
-          style={styles.previewWebView}
+      <View style={styles.previewContainer} collapsable={false}>
+        <View style={{ flex: 1, backgroundColor: 'transparent' }} ref={previewContainerRef} collapsable={false}>
+          <WebView
+            ref={svgWebViewRef}
+            source={{ html: baseSvgHtml, baseUrl: IMAGE_BASE_URL + '/' }}
+            style={styles.previewWebView}
+            opaque={false}
+            backgroundColor="transparent"
           scrollEnabled={false}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
@@ -987,9 +1007,10 @@ const Designer = () => {
             }
           }}
         />
+      </View>
 
-        {/* View toggle badge */}
-        {currentStep === FINISH_STEP && (
+      {/* View toggle badge */}
+      {currentStep === FINISH_STEP && (
           <TouchableOpacity style={styles.viewToggleBadge} onPress={handleToggleView} disabled={selecting}>
             <Feather name="refresh-cw" size={14} color="#fff" />
             <Text style={styles.viewToggleText}>
@@ -1234,7 +1255,7 @@ const Designer = () => {
                               <style>
                                 * { margin: 0; padding: 0; box-sizing: border-box; }
                                 html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
-                                body { display: flex; justify-content: center; align-items: center; }
+                                body { display: flex; justify-content: center; align-items: center; background: transparent; }
                                 #container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
                                 svg { max-width: 100%; max-height: 100%; object-fit: contain; }
                               </style>
@@ -1449,6 +1470,17 @@ const Designer = () => {
                 <Feather name="download" size={16} color="#4B5563" />
               )}
               <Text style={styles.finishSecondaryText}>{downloading ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.finishActionsRow}>
+            <TouchableOpacity
+              style={[styles.finishSecondaryBtn, { borderColor: '#e5040a', backgroundColor: '#FEF2F2' }]}
+              onPress={handleViewOnHome}
+              disabled={selecting}
+              activeOpacity={0.7}
+            >
+              <Feather name="home" size={16} color="#e5040a" />
+              <Text style={[styles.finishSecondaryText, { color: '#e5040a' }]}>View on Home</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
@@ -1720,6 +1752,27 @@ const Designer = () => {
 
       {/* Enquiry Modal */}
       {renderEnquiryModal()}
+
+      {/* Door Visualiser Modal */}
+      <DoorVisualiserModal
+        visible={showDoorVisualiser}
+        doorSvgHtml={baseSvgHtml}
+        onClose={() => setShowDoorVisualiser(false)}
+        onSaveEnquiryImage={(base64Uri) => {
+          // base64Uri is returned from the visualiser when they've aligned their door
+          // We extract just the base64 payload to be compliant with our generic Edge Function format.
+          const base64Data = base64Uri && base64Uri.startsWith('data:image') 
+              ? base64Uri.split(",")[1] 
+              : null;
+          
+          if (base64Data) {
+              setViewOnHomeImage(base64Data);
+          }
+          // Note: The UI just returns the image internally, we don't necessarily pop the enquiry directly,
+          // user clicks the "Send Enquiry" button which now picks up the saved `viewOnHomeImage`.
+          Alert.alert("Success", "Your view on home preview is attached to your enquiry.");
+        }}
+      />
     </View>
   );
 };
@@ -1774,7 +1827,7 @@ const styles = StyleSheet.create({
   },
   previewWebView: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   previewPlaceholder: {
     flex: 1,

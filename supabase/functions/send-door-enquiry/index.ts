@@ -15,6 +15,7 @@ interface EnquiryPayload {
   feedback?: string;
   outsideImageUrl?: string;
   insideImageUrl?: string;
+  viewOnHomeImageUrl?: string;
   doorSpec: {
     doorStyle?: string;
     externalColour?: string;
@@ -42,13 +43,14 @@ function buildEmailHtml(data: EnquiryPayload): string {
 
   const hasOutside = !!data.outsideImageUrl;
   const hasInside = !!data.insideImageUrl;
-  const hasAnyImage = hasOutside || hasInside;
+  const hasViewOnHome = !!data.viewOnHomeImageUrl;
+  const hasAnyImage = hasOutside || hasInside || hasViewOnHome;
 
   // Build door images section
   let doorImagesHtml = "";
   if (hasAnyImage) {
-    const imageCount = (hasOutside ? 1 : 0) + (hasInside ? 1 : 0);
-    const imageWidth = imageCount === 2 ? "48%" : "60%";
+    const imageCount = (hasOutside ? 1 : 0) + (hasInside ? 1 : 0) + (hasViewOnHome ? 1 : 0);
+    const imageWidth = imageCount >= 2 ? "32%" : "60%";
     
     doorImagesHtml = `
           <tr>
@@ -59,14 +61,19 @@ function buildEmailHtml(data: EnquiryPayload): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   ${hasOutside ? `
-                  <td align="center" style="width:${imageWidth}; padding: 8px; vertical-align:top;">
+                  <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
                     <img src="${data.outsideImageUrl}" alt="Outside View" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
-                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Outside View</p>
+                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Outside</p>
                   </td>` : ""}
                   ${hasInside ? `
-                  <td align="center" style="width:${imageWidth}; padding: 8px; vertical-align:top;">
+                  <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
                     <img src="${data.insideImageUrl}" alt="Inside View" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
-                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Inside View</p>
+                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Inside</p>
+                  </td>` : ""}
+                  ${hasViewOnHome ? `
+                  <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
+                    <img src="${data.viewOnHomeImageUrl}" alt="View on Home" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
+                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">On Home</p>
                   </td>` : ""}
                 </tr>
               </table>
@@ -219,6 +226,7 @@ Deno.serve(async (req) => {
     console.log(`[SendDoorEnquiry] Sending enquiry from ${payload.name} (${payload.email})`);
     if (payload.outsideImageUrl) console.log(`[SendDoorEnquiry] Outside image: ${payload.outsideImageUrl}`);
     if (payload.insideImageUrl) console.log(`[SendDoorEnquiry] Inside image: ${payload.insideImageUrl}`);
+    if (payload.viewOnHomeImageUrl) console.log(`[SendDoorEnquiry] View on home image: ${payload.viewOnHomeImageUrl}`);
 
     // Build email content
     const htmlBody = buildEmailHtml(payload);

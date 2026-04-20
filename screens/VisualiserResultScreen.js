@@ -179,6 +179,12 @@ export default function VisualiserResultScreen({ route, navigation }) {
                 <Text style={styles.optionValue}>{options.style}</Text>
             </View>
           )}
+          {options.customPrompt && (
+            <View style={styles.optionRow}>
+                <Text style={styles.optionLabel}>Custom:</Text>
+                <Text style={[styles.optionValue, { flexShrink: 1, marginLeft: 16, textAlign: 'right' }]} numberOfLines={2}>{options.customPrompt}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.actionsContainer}>

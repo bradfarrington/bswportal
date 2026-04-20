@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Modal, Animated, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Modal, Animated, useWindowDimensions, TextInput } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import { hasReachedGenerationLimit, incrementGenerationCount } from "../utils/VisualiserStorage";
@@ -41,6 +42,7 @@ export default function VisualiserScreen({ navigation }) {
   const [windowColor, setWindowColor] = useState("White");
   const [doorColor, setDoorColor] = useState("None");
   const [style, setStyle] = useState("Keep Existing");
+  const [customPrompt, setCustomPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   
@@ -148,6 +150,7 @@ export default function VisualiserScreen({ navigation }) {
         windowColor,
         doorColor: doorColor !== "None" ? doorColor : null,
         style: style !== "Keep Existing" ? style : null,
+        customPrompt: customPrompt.trim() !== "" ? customPrompt.trim() : null,
       };
 
       const finalImageUrl = await generateVisualiserImage(imageUri, options);
@@ -236,20 +239,7 @@ export default function VisualiserScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Design Your Own Option */}
-        <View style={styles.designOwnCard}>
-          <View style={styles.designOwnInfo}>
-            <Text style={styles.designOwnTitle}>Prefer more control?</Text>
-            <Text style={styles.designOwnDesc}>Manually drag, scale, and customise window designs right over your photo.</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.designOwnButton}
-            onPress={() => navigation.navigate("WindowDesignScreen")}
-          >
-            <Ionicons name="color-palette" size={20} color="#fff" />
-            <Text style={styles.designOwnBtnText}>Design Your Own</Text>
-          </TouchableOpacity>
-        </View>
+
 
         {/* Configuration Form */}
         <View style={[styles.configSection, isTablet && styles.configSectionTablet]}>
@@ -262,6 +252,19 @@ export default function VisualiserScreen({ navigation }) {
           <View style={isTablet ? { flex: 1 } : null}>
             <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
           </View>
+        </View>
+
+        {/* Custom Prompt */}
+        <View style={styles.customPromptContainer}>
+          <Text style={styles.dropdownLabel}>Custom Instructions (Optional)</Text>
+          <TextInput 
+            style={styles.customPromptInput}
+            placeholder="e.g. Change the guttering colour to black..."
+            placeholderTextColor="#9CA3AF"
+            value={customPrompt}
+            onChangeText={setCustomPrompt}
+            multiline
+          />
         </View>
 
         {limitReached ? (
@@ -280,6 +283,45 @@ export default function VisualiserScreen({ navigation }) {
             />
           </View>
         )}
+
+        <View style={styles.dividerContainer}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Design Your Own Option */}
+        <TouchableOpacity 
+          style={styles.designOwnCard}
+          onPress={() => navigation.navigate("WindowDesignScreen")}
+          activeOpacity={0.9}
+        >
+          <View style={styles.designOwnInner}>
+              <Image
+                source={require('../assets/visualiser-card-bg.jpg')}
+                style={styles.designOwnBackground}
+                resizeMode="cover"
+              />
+              
+              <View style={styles.designOwnContent}>
+                <Text style={styles.designOwnTitle}>Prefer more control?</Text>
+                <Text style={styles.designOwnDesc}>Manually drag, scale, and customise window designs right over your photo.</Text>
+                
+                <View style={styles.designOwnButtonWrapper}>
+                  <View style={styles.designOwnButtonGlow} />
+                  <LinearGradient
+                    colors={['#1E3A8A', '#172554']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.designOwnButton}
+                  >
+                    <Ionicons name="color-palette" size={16} color="#fff" />
+                    <Text style={styles.designOwnBtnText}>Design Your Own</Text>
+                  </LinearGradient>
+                </View>
+              </View>
+          </View>
+        </TouchableOpacity>
 
       {/* Loading Overlay Modal */}
       <Modal visible={isGenerating} transparent animationType="fade">
@@ -445,6 +487,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 32,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    fontFamily: 'InterMedium',
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginHorizontal: 16,
+  },
   sectionTitle: {
     fontFamily: "InterSemiBold",
     fontSize: 16,
@@ -453,39 +511,83 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   designOwnCard: {
-    backgroundColor: '#EFF6FF',
-    padding: 16,
-    borderRadius: 12,
     marginBottom: 24,
+    position: 'relative',
+    height: 190,
+    zIndex: 10,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  designOwnInner: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    flexDirection: 'column',
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  designOwnBackground: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  designOwnContent: {
+    padding: 24,
+    zIndex: 2,
+    flex: 1,
+    justifyContent: 'center',
   },
   designOwnTitle: {
     fontFamily: 'InterBold',
-    fontSize: 16,
-    color: '#1E3A8A',
-    marginBottom: 4,
+    fontSize: 20,
+    color: '#FFFFFF',
+    marginBottom: 6,
   },
   designOwnDesc: {
     fontFamily: 'InterMedium',
     fontSize: 14,
-    color: '#3B82F6',
-    marginBottom: 16,
+    color: '#D4D4D8',
+    marginBottom: 18,
+    lineHeight: 20,
+  },
+  designOwnButtonWrapper: {
+    alignSelf: 'flex-start',
+    position: 'relative',
+  },
+  designOwnButtonGlow: {
+    position: 'absolute',
+    top: -2,
+    bottom: -2,
+    left: -2,
+    right: -2,
+    backgroundColor: 'rgba(30, 58, 138, 0.8)',
+    borderRadius: 22,
+    zIndex: 1,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   designOwnButton: {
-    backgroundColor: '#1E3A8A',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(96, 165, 250, 0.3)',
   },
   designOwnBtnText: {
     color: '#FFFFFF',
     fontFamily: 'InterSemiBold',
     marginLeft: 8,
-    fontSize: 15,
+    fontSize: 14,
   },
   pillContainer: {
     flexDirection: "row",
@@ -538,6 +640,22 @@ const styles = StyleSheet.create({
     fontFamily: 'InterMedium',
     fontSize: 15,
     color: '#111827',
+  },
+  customPromptContainer: {
+    marginBottom: 24,
+  },
+  customPromptInput: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontFamily: 'InterMedium',
+    fontSize: 15,
+    color: '#111827',
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   limitContainer: {
     backgroundColor: "#FEE2E2",
