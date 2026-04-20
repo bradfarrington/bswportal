@@ -236,6 +236,21 @@ export default function VisualiserScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* Design Your Own Option */}
+        <View style={styles.designOwnCard}>
+          <View style={styles.designOwnInfo}>
+            <Text style={styles.designOwnTitle}>Prefer more control?</Text>
+            <Text style={styles.designOwnDesc}>Manually drag, scale, and customise window designs right over your photo.</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.designOwnButton}
+            onPress={() => navigation.navigate("WindowDesignScreen")}
+          >
+            <Ionicons name="color-palette" size={20} color="#fff" />
+            <Text style={styles.designOwnBtnText}>Design Your Own</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Configuration Form */}
         <View style={[styles.configSection, isTablet && styles.configSectionTablet]}>
           <View style={isTablet ? { flex: 1 } : null}>
@@ -436,6 +451,41 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 12,
     marginTop: 16,
+  },
+  designOwnCard: {
+    backgroundColor: '#EFF6FF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'column',
+  },
+  designOwnTitle: {
+    fontFamily: 'InterBold',
+    fontSize: 16,
+    color: '#1E3A8A',
+    marginBottom: 4,
+  },
+  designOwnDesc: {
+    fontFamily: 'InterMedium',
+    fontSize: 14,
+    color: '#3B82F6',
+    marginBottom: 16,
+  },
+  designOwnButton: {
+    backgroundColor: '#1E3A8A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  designOwnBtnText: {
+    color: '#FFFFFF',
+    fontFamily: 'InterSemiBold',
+    marginLeft: 8,
+    fontSize: 15,
   },
   pillContainer: {
     flexDirection: "row",

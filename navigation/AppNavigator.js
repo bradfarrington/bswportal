@@ -28,6 +28,7 @@ import CatalogProductDetailsScreen from "../screens/CatalogProductDetailsScreen"
 import PdfViewerScreen from "../screens/PdfViewer";
 import VisualiserScreen from "../screens/VisualiserScreen";
 import VisualiserResultScreen from "../screens/VisualiserResultScreen";
+import WindowDesignScreen from "../screens/WindowDesignScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -312,6 +313,14 @@ const AppNavigator = () => {
         name="ProductEnquiry"
         component={ProductEnquiryScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="WindowDesignScreen"
+        component={WindowDesignScreen}
+        options={{ 
+          headerShown: false,
+          presentation: 'fullScreenModal'
+        }}
       />
     </Stack.Navigator>
   );

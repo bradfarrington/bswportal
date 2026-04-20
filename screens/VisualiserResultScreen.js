@@ -17,12 +17,14 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { captureRef } from "react-native-view-shot";
 
 const { width: screenWidth } = Dimensions.get("window");
 const IMAGE_WIDTH = screenWidth - 32;
 const IMAGE_HEIGHT = IMAGE_WIDTH;
 
 export default function VisualiserResultScreen({ route, navigation }) {
+  const imageRef = useRef(null);
   const { originalImage, generatedImage, options } = route.params;
 
   const [sliderPosition, setSliderPosition] = useState(IMAGE_WIDTH / 2);
@@ -56,10 +58,18 @@ export default function VisualiserResultScreen({ route, navigation }) {
         return;
       }
 
+      // Capture the generated image with watermark from the hidden view
+      console.log("[Save] Capturing hidden view with view-shot...");
+      const localUri = await captureRef(imageRef, {
+        format: "png",
+        quality: 1,
+      });
+      console.log("[Save] View captured to:", localUri);
+
       // Try saving directly to camera roll (skip requestPermissionsAsync which has a known native crash in this RN version)
       try {
         console.log("[Save] Attempting MediaLibrary.saveToLibraryAsync...");
-        await MediaLibrary.saveToLibraryAsync(generatedImage);
+        await MediaLibrary.saveToLibraryAsync(localUri);
         console.log("[Save] MediaLibrary save succeeded!");
         Alert.alert("Saved!", "The image has been saved to your camera roll.");
         return;
@@ -69,7 +79,7 @@ export default function VisualiserResultScreen({ route, navigation }) {
 
       // Fallback: use share sheet
       console.log("[Save] Using share sheet fallback...");
-      await Sharing.shareAsync(generatedImage, {
+      await Sharing.shareAsync(localUri, {
         UTI: "public.image",
         mimeType: "image/png",
       });
@@ -100,6 +110,22 @@ export default function VisualiserResultScreen({ route, navigation }) {
             </TouchableOpacity>
             <Text style={styles.title}>Your Results</Text>
             <View style={{width: 24}} />
+        </View>
+
+        {/* Hidden view for capturing final image + watermark correctly */}
+        <View style={{ position: 'absolute', left: -screenWidth * 2, top: -screenWidth * 2 }} pointerEvents="none">
+          <View ref={imageRef} style={{ width: IMAGE_WIDTH, height: IMAGE_HEIGHT, backgroundColor: '#FFF' }} collapsable={false}>
+            {generatedImage && (
+              <Image source={{ uri: generatedImage }} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
+            )}
+            <View style={styles.watermarkOverlay} pointerEvents="none">
+              <Image 
+                source={require("../assets/doors/composite-doors/background-1-no-bg.png")} 
+                style={styles.watermarkImageFull} 
+                resizeMode="cover" 
+              />
+            </View>
+          </View>
         </View>
 
         <Text style={styles.subtitle}>Drag the slider to compare before and after.</Text>
