@@ -10,6 +10,9 @@ import { registerForPushNotificationsAsync } from "./components/pushNotification
 import { StatusBar } from "expo-status-bar"; 
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+// Keep the splash screen visible while we load fonts/resources
+SplashScreen.preventAutoHideAsync();
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,

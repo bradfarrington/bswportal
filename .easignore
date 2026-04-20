@@ -1,19 +1,27 @@
 # Files/directories to exclude from EAS build uploads
-# This reduces upload size from ~220MB to ~30-40MB
+# When .easignore exists, EAS uses ONLY this file (not .gitignore)
+
+# Dependencies (EAS runs npm ci to install fresh)
+node_modules/
+package-lock.json
 
 # Git history
 .git
+
+# Expo cache
+.expo/
 
 # Migration scripts (not needed at runtime)
 scripts/
 *.sql
 
-# Legacy files
+# Legacy/dev files
 MAINTENANCE GUIDE.pdf
 google-services.json
 tsconfig.json
 README.md
 .env.local
+# NOTE: Do NOT exclude .env — Expo needs it at build time to inline EXPO_PUBLIC_* variables
 
 # Test scripts
 check_pluto.js
@@ -23,4 +31,18 @@ test_sp.js
 test_supabase.js
 test_svg.js
 test_svg_ids.js
-bulk_update.sql
+
+# Build artifacts
+dist/
+web-build/
+
+# Debug logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+
+# Gemini/AI
+.gemini/
