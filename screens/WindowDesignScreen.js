@@ -21,9 +21,9 @@ import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 
-import { ALL_COLORS, WINDOW_ASSETS, WINDOW_KEYS } from "../utils/WindowAssets";
+import { supabase } from '../config/supabaseClient';
 
-const DraggableWindow = ({ windowKey, selectedColor, onRemove, isActive, onActivate }) => {
+const DraggableWindow = ({ windowKey, selectedColor, onRemove, isActive, onActivate, windowAssets }) => {
   const [boxState, setBoxState] = useState({ x: 50, y: 50, w: 150, h: 200 });
   const boxRef = useRef({ x: 50, y: 50, w: 150, h: 200 });
   const initialBox = useRef({ x: 0, y: 0, w: 0, h: 0 });
@@ -39,11 +39,12 @@ const DraggableWindow = ({ windowKey, selectedColor, onRemove, isActive, onActiv
   };
 
   // Get the most appropriate image asset
-  const colorAssets = WINDOW_ASSETS[windowKey];
-  const exactAsset = colorAssets[selectedColor.id];
-  const fallbackAsset = colorAssets["White"];
-  const imageSource = exactAsset || fallbackAsset;
-  const tintColor = !exactAsset ? selectedColor.hex : undefined;
+  const colorAssets = windowAssets[windowKey];
+  const exactAsset = colorAssets ? colorAssets[selectedColor?.id] : null;
+  const fallbackAsset = colorAssets ? colorAssets["White"] : null;
+  const imageUrl = exactAsset || fallbackAsset;
+  const imageSource = imageUrl ? { uri: imageUrl } : null;
+  const tintColor = !exactAsset && selectedColor ? selectedColor.hex : undefined;
 
   // Move entire box
   const panResponderMove = useRef(
@@ -151,11 +152,13 @@ const DraggableWindow = ({ windowKey, selectedColor, onRemove, isActive, onActiv
       ]}
     >
       <View style={StyleSheet.absoluteFillObject} {...panResponderMove.panHandlers}>
-        <Image 
-          source={imageSource} 
-          style={[styles.windowImageStretched, tintColor && { tintColor }]} 
-          resizeMode="stretch" 
-        />
+        {imageSource && (
+          <Image 
+            source={imageSource} 
+            style={[styles.windowImageStretched, tintColor && { tintColor }]} 
+            resizeMode="stretch" 
+          />
+        )}
       </View>
 
       {isActive && (
@@ -178,12 +181,58 @@ const DraggableWindow = ({ windowKey, selectedColor, onRemove, isActive, onActiv
 
 export default function WindowDesignScreen({ navigation }) {
   const [imageUri, setImageUri] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(ALL_COLORS[0]); 
+  
+  // Data fetched from Supabase
+  const [allColors, setAllColors] = useState([]);
+  const [windowKeys, setWindowKeys] = useState([]);
+  const [windowAssets, setWindowAssets] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [selectedColor, setSelectedColor] = useState(null); 
   const [addedWindows, setAddedWindows] = useState([]); 
   const [activeWindowId, setActiveWindowId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   
   const containerRef = useRef(null);
+
+  React.useEffect(() => {
+    async function loadData() {
+      try {
+        const [colorsRes, stylesRes, assetsRes] = await Promise.all([
+          supabase.from('visualiser_colors').select('*').order('sort_order', { ascending: true }),
+          supabase.from('visualiser_window_styles').select('*').order('sort_order', { ascending: true }),
+          supabase.from('visualiser_assets').select('*')
+        ]);
+
+        if (colorsRes.data) {
+          setAllColors(colorsRes.data);
+          if (colorsRes.data.length > 0) {
+            setSelectedColor(colorsRes.data[0]);
+          }
+        }
+        
+        if (stylesRes.data) {
+          setWindowKeys(stylesRes.data.map(s => s.id));
+        }
+
+        if (assetsRes.data) {
+           const assetsMap = {};
+           assetsRes.data.forEach(asset => {
+             if (!assetsMap[asset.window_style_id]) {
+               assetsMap[asset.window_style_id] = {};
+             }
+             assetsMap[asset.window_style_id][asset.color_id] = asset.image_url;
+           });
+           setWindowAssets(assetsMap);
+        }
+      } catch (err) {
+        console.warn('Failed to load visualiser data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -242,6 +291,14 @@ export default function WindowDesignScreen({ navigation }) {
     if (activeWindowId === id) setActiveWindowId(null);
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#E5040A" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
@@ -281,6 +338,7 @@ export default function WindowDesignScreen({ navigation }) {
             isActive={win.id === activeWindowId}
             onActivate={() => setActiveWindowId(win.id)}
             onRemove={() => removeWindow(win.id)}
+            windowAssets={windowAssets}
           />
         ))}
 
@@ -291,7 +349,7 @@ export default function WindowDesignScreen({ navigation }) {
         <View style={styles.controlPanel}>
           <Text style={styles.label}>1. Select Window Style</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16, paddingRight: 16 }} style={styles.windowList}>
-            {WINDOW_KEYS.map((key) => (
+            {windowKeys.map((key) => (
               <TouchableOpacity 
                 key={key} 
                 style={styles.windowThumbnailBtn} 
@@ -299,11 +357,13 @@ export default function WindowDesignScreen({ navigation }) {
                 activeOpacity={0.7}
               >
                 <View style={styles.windowThumbnailWrapper}>
-                  <Image 
-                    source={WINDOW_ASSETS[key]["White"]} 
-                    style={styles.windowThumbnailImg} 
-                    resizeMode="contain" 
-                  />
+                  {windowAssets[key]?.["White"] && (
+                    <Image 
+                      source={{ uri: windowAssets[key]["White"] }} 
+                      style={styles.windowThumbnailImg} 
+                      resizeMode="contain" 
+                    />
+                  )}
                   <View style={styles.addOverlay}><Ionicons name="add-circle" size={24} color="#E5040A" /></View>
                 </View>
               </TouchableOpacity>
@@ -312,13 +372,13 @@ export default function WindowDesignScreen({ navigation }) {
 
           <Text style={[styles.label, { marginTop: 16 }]}>2. Frame Colour</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.colorList}>
-            {ALL_COLORS.map(c => (
+            {allColors.map(c => (
               <TouchableOpacity 
                 key={c.id} 
                 style={[
                   styles.colorCircle, 
                   { backgroundColor: c.hex },
-                  selectedColor.id === c.id && styles.colorCircleActive
+                  selectedColor?.id === c.id && styles.colorCircleActive
                 ]}
                 onPress={() => setSelectedColor(c)}
               />
