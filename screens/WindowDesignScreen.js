@@ -342,7 +342,15 @@ export default function WindowDesignScreen({ navigation }) {
           />
         ))}
 
-        {/* Small watermark can be added easily here, but we will leave mostly clean */}
+        {imageUri && (
+          <View style={styles.watermarkOverlay} pointerEvents="none">
+            <Image 
+              source={require('../assets/doors/composite-doors/background-1-no-bg.png')} 
+              style={styles.watermarkImageFull} 
+              resizeMode="cover" 
+            />
+          </View>
+        )}
       </View>
 
       {imageUri && (
@@ -445,6 +453,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: '#9CA3AF',
     fontFamily: 'InterMedium',
+  },
+  watermarkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    opacity: 0.08,
+    zIndex: 5,
+  },
+  watermarkImageFull: {
+    width: '100%',
+    height: '100%',
   },
   draggableBox: {
     position: 'absolute',

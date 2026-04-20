@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
       ...StyleSheet.absoluteFillObject,
       justifyContent: 'center',
       alignItems: 'center',
-      opacity: 0.15,
+      opacity: 0.08,
   },
   watermarkImageFull: {
       width: '100%',
