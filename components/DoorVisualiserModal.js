@@ -17,128 +17,95 @@ import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { captureRef } from "react-native-view-shot";
 import { WebView } from "react-native-webview";
+import { createPerspectiveMatrix } from "../utils/PerspectiveMath";
 
 const DraggableDoor = ({ doorSvgHtml, onRemove, isActive, onActivate }) => {
-  const [boxState, setBoxState] = useState({ x: 50, y: 50, w: 120, h: 240 });
-  const boxRef = useRef({ x: 50, y: 50, w: 120, h: 240 });
-  const initialBox = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  const W = 120;
+  const H = 240;
 
-  const updateBox = (newBox) => {
-    boxRef.current = newBox;
-    setBoxState(newBox);
+  const [cornersState, setCornersState] = useState({
+    tl: { x: 50, y: 50 },
+    tr: { x: 50 + W, y: 50 },
+    bl: { x: 50, y: 50 + H },
+    br: { x: 50 + W, y: 50 + H },
+  });
+  const cornersRef = useRef(cornersState);
+  const initialCorners = useRef(null);
+
+  const updateCorners = (newCorners) => {
+    cornersRef.current = newCorners;
+    setCornersState(newCorners);
   };
 
   const initPan = () => {
     onActivate();
-    initialBox.current = { ...boxRef.current };
+    initialCorners.current = {
+      tl: { ...cornersRef.current.tl },
+      tr: { ...cornersRef.current.tr },
+      bl: { ...cornersRef.current.bl },
+      br: { ...cornersRef.current.br },
+    };
   };
 
-  // Move entire box
+  // Move entire object
   const panResponderMove = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: initPan,
       onPanResponderMove: (e, gestureState) => {
-        updateBox({
-          ...initialBox.current,
-          x: initialBox.current.x + gestureState.dx,
-          y: initialBox.current.y + gestureState.dy
+        const dx = gestureState.dx;
+        const dy = gestureState.dy;
+        updateCorners({
+          tl: { x: initialCorners.current.tl.x + dx, y: initialCorners.current.tl.y + dy },
+          tr: { x: initialCorners.current.tr.x + dx, y: initialCorners.current.tr.y + dy },
+          bl: { x: initialCorners.current.bl.x + dx, y: initialCorners.current.bl.y + dy },
+          br: { x: initialCorners.current.br.x + dx, y: initialCorners.current.br.y + dy },
         });
       },
     })
   ).current;
 
-  // Resize Top Left
-  const panResponderTL = useRef(
-    PanResponder.create({
+  // Generic generator for corner adjustment PanResponders
+  const createCornerPan = (cornerKey) => {
+    return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: initPan,
       onPanResponderMove: (e, gestureState) => {
-        let next = { ...initialBox.current };
-        if (initialBox.current.w - gestureState.dx >= 20) {
-          next.x = initialBox.current.x + gestureState.dx;
-          next.w = initialBox.current.w - gestureState.dx;
-        }
-        if (initialBox.current.h - gestureState.dy >= 20) {
-          next.y = initialBox.current.y + gestureState.dy;
-          next.h = initialBox.current.h - gestureState.dy;
-        }
-        updateBox(next);
+        const next = {
+          tl: { ...initialCorners.current.tl },
+          tr: { ...initialCorners.current.tr },
+          bl: { ...initialCorners.current.bl },
+          br: { ...initialCorners.current.br },
+        };
+        next[cornerKey].x += gestureState.dx;
+        next[cornerKey].y += gestureState.dy;
+        updateCorners(next);
       },
-    })
-  ).current;
+    });
+  };
 
-  // Resize Top Right
-  const panResponderTR = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: initPan,
-      onPanResponderMove: (e, gestureState) => {
-        let next = { ...initialBox.current };
-        if (initialBox.current.w + gestureState.dx >= 20) {
-          next.w = initialBox.current.w + gestureState.dx;
-        }
-        if (initialBox.current.h - gestureState.dy >= 20) {
-          next.y = initialBox.current.y + gestureState.dy;
-          next.h = initialBox.current.h - gestureState.dy;
-        }
-        updateBox(next);
-      },
-    })
-  ).current;
+  const panTL = useRef(createCornerPan('tl')).current;
+  const panTR = useRef(createCornerPan('tr')).current;
+  const panBL = useRef(createCornerPan('bl')).current;
+  const panBR = useRef(createCornerPan('br')).current;
 
-  // Resize Bottom Left
-  const panResponderBL = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: initPan,
-      onPanResponderMove: (e, gestureState) => {
-        let next = { ...initialBox.current };
-        if (initialBox.current.w - gestureState.dx >= 20) {
-          next.x = initialBox.current.x + gestureState.dx;
-          next.w = initialBox.current.w - gestureState.dx;
-        }
-        if (initialBox.current.h + gestureState.dy >= 20) {
-          next.h = initialBox.current.h + gestureState.dy;
-        }
-        updateBox(next);
-      },
-    })
-  ).current;
-
-  // Resize Bottom Right
-  const panResponderBR = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: initPan,
-      onPanResponderMove: (e, gestureState) => {
-        let next = { ...initialBox.current };
-        if (initialBox.current.w + gestureState.dx >= 20) {
-          next.w = initialBox.current.w + gestureState.dx;
-        }
-        if (initialBox.current.h + gestureState.dy >= 20) {
-          next.h = initialBox.current.h + gestureState.dy;
-        }
-        updateBox(next);
-      },
-    })
-  ).current;
+  const matrix = createPerspectiveMatrix(W, H, cornersState.tl, cornersState.tr, cornersState.bl, cornersState.br);
 
   return (
-    <View
-      style={[
-        styles.draggableBox,
-        {
-          left: boxState.x,
-          top: boxState.y,
-          width: boxState.w,
-          height: boxState.h,
+    <View style={[StyleSheet.absoluteFillObject]} pointerEvents="box-none">
+      <View
+        {...panResponderMove.panHandlers}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: W,
+          height: H,
+          transform: [{ matrix }],
           borderColor: isActive ? '#E5040A' : 'transparent',
           borderWidth: isActive ? 2 : 0,
-        }
-      ]}
-    >
-      <View style={StyleSheet.absoluteFillObject} {...panResponderMove.panHandlers}>
+        }}
+      >
         <View pointerEvents="none" style={styles.imageStretched}>
           <WebView 
             source={{ html: doorSvgHtml, baseUrl: 'https://designer.bswwindows.co.uk/' }}
@@ -152,17 +119,20 @@ const DraggableDoor = ({ doorSvgHtml, onRemove, isActive, onActivate }) => {
       </View>
 
       {isActive && (
-        <TouchableOpacity style={styles.deleteBtn} onPress={onRemove}>
+        <TouchableOpacity 
+          style={[styles.deleteBtn, { left: cornersState.tr.x + 10, top: cornersState.tr.y - 30 }]} 
+          onPress={onRemove}
+        >
           <Ionicons name="close" size={16} color="#fff" />
         </TouchableOpacity>
       )}
 
       {isActive && (
         <>
-          <View style={[styles.cornerHandle, styles.tl]} {...panResponderTL.panHandlers} />
-          <View style={[styles.cornerHandle, styles.tr]} {...panResponderTR.panHandlers} />
-          <View style={[styles.cornerHandle, styles.bl]} {...panResponderBL.panHandlers} />
-          <View style={[styles.cornerHandle, styles.br]} {...panResponderBR.panHandlers} />
+          <View style={[styles.cornerHandle, { left: cornersState.tl.x - 10, top: cornersState.tl.y - 10 }]} {...panTL.panHandlers} />
+          <View style={[styles.cornerHandle, { left: cornersState.tr.x - 10, top: cornersState.tr.y - 10 }]} {...panTR.panHandlers} />
+          <View style={[styles.cornerHandle, { left: cornersState.bl.x - 10, top: cornersState.bl.y - 10 }]} {...panBL.panHandlers} />
+          <View style={[styles.cornerHandle, { left: cornersState.br.x - 10, top: cornersState.br.y - 10 }]} {...panBR.panHandlers} />
         </>
       )}
     </View>
@@ -416,8 +386,6 @@ const styles = StyleSheet.create({
   br: { bottom: -10, right: -10 },
   deleteBtn: {
     position: 'absolute',
-    top: -30,
-    right: -10,
     width: 28,
     height: 28,
     borderRadius: 14,
