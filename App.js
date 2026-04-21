@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import AppNavigator from "./navigation/AppNavigator";
 import { useFonts } from "expo-font";
@@ -11,6 +12,8 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { loadCategories } from "./data/ProductsData";
 import { loadAllDesignerData } from "./data/DoorDesignerData";
+import { useVideoPlayer, VideoView } from "expo-video";
+import { useEventListener } from "expo";
 
 // Keep the splash screen visible while we load fonts/resources
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +42,32 @@ export default function App() {
 
   // Prefetch critical data during splash screen (parallel with fonts)
   const [dataReady, setDataReady] = useState(false);
+  const [videoFinished, setVideoFinished] = useState(false);
+
+  // Create the video player for the splash screen video
+  const player = useVideoPlayer(
+    require("./assets/splash-screen-video.mp4"),
+    (player) => {
+      player.loop = false;
+      player.play();
+    }
+  );
+
+  // Listen for the video to finish playing
+  useEventListener(player, "playToEnd", () => {
+    setVideoFinished(true);
+  });
+
+  // Listen for status changes to handle errors
+  useEventListener(player, "statusChange", ({ status, error }) => {
+    if (status === "error") {
+      console.log("Video error:", error);
+      // Fallback in case of video error
+      setVideoFinished(true);
+      SplashScreen.hideAsync();
+    }
+  });
+
   useEffect(() => {
     Promise.all([
       loadCategories().catch(err => console.log('[Prefetch] Categories failed:', err)),
@@ -48,6 +77,7 @@ export default function App() {
       setDataReady(true);
     }).catch(() => setDataReady(true)); // Never block app on failure
   }, []);
+
   const notificationListener = useRef();
   const responseListener = useRef();
 
@@ -69,28 +99,47 @@ export default function App() {
       Notifications.removeNotificationSubscription(responseListener.current);
     };
   }, []);
+
   useEffect(() => {
      registerForPushNotificationsAsync()
       .then((x) => console.log(x))
       .catch((error) => console.log(error));
   }, []);
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && dataReady) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, dataReady]);
-  useEffect(() => {
-    onLayoutRootView();
-  }, [fontsLoaded, dataReady]);
-  if (!fontsLoaded || !dataReady) {
-    return null;
+
+  // Hide the native splash screen when the video renders its first frame
+  const onFirstFrameRender = useCallback(async () => {
+    await SplashScreen.hideAsync();
+  }, []);
+
+  const appReady = fontsLoaded && dataReady && videoFinished;
+
+  if (!appReady) {
+    return (
+      <View style={styles.splashContainer}>
+        <VideoView
+          player={player}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          nativeControls={false}
+          onFirstFrameRender={onFirstFrameRender}
+        />
+      </View>
+    );
   }
+
   return (
     <SafeAreaProvider>
-    <NavigationContainer>
-      <AppNavigator />
-      <StatusBar style="auto" />
-    </NavigationContainer>
+      <NavigationContainer>
+        <AppNavigator />
+        <StatusBar style="auto" />
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    backgroundColor: "#000000",
+  },
+});

@@ -7,9 +7,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/transparent.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -53,7 +53,8 @@
           "photosPermission": "BSW Portal needs access to your photos for the AI visualiser.",
           "cameraPermission": "BSW Portal needs your camera to take photos of your home."
         }
-      ]
+      ],
+      "expo-video"
     ]
   }
 }
