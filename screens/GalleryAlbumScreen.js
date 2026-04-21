@@ -15,6 +15,7 @@ import axios from 'axios';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
+import CachedImage from '../components/CachedImage';
 
 const { width } = Dimensions.get('window');
 const PADDING = 12;
@@ -174,7 +175,7 @@ const GalleryAlbumScreen = ({ route }) => {
       onPress={() => handleImagePress(idx)}
       style={[styles.imageWrapper, { width: tileWidth, height: tileHeight }]}
     >
-      <Image
+      <CachedImage
         source={{ uri: getThumbUrl(photo) }}
         style={styles.image}
         resizeMode="cover"

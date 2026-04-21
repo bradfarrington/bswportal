@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import CachedImage from '../components/CachedImage';
 
 export default function CatalogSubCategoriesScreen({ route, navigation }) {
   const { category } = route.params;
@@ -70,16 +71,26 @@ export default function CatalogSubCategoriesScreen({ route, navigation }) {
           }
         }}
       >
-        <ImageBackground 
-          source={imageSource}
-          style={styles.imageBackground}
-          imageStyle={{ borderRadius: 16 }}
-        >
-          <View style={styles.overlay}>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <MaterialIcons name="arrow-forward-ios" size={14} color="#fff" />
+        {imageSource && typeof imageSource === 'object' && imageSource.uri ? (
+          <View style={[styles.imageBackground, { overflow: 'hidden', borderRadius: 16 }]}>
+            <CachedImage source={imageSource} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <View style={styles.overlay}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <MaterialIcons name="arrow-forward-ios" size={14} color="#fff" />
+            </View>
           </View>
-        </ImageBackground>
+        ) : (
+          <ImageBackground 
+            source={imageSource}
+            style={styles.imageBackground}
+            imageStyle={{ borderRadius: 16 }}
+          >
+            <View style={styles.overlay}>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <MaterialIcons name="arrow-forward-ios" size={14} color="#fff" />
+            </View>
+          </ImageBackground>
+        )}
       </TouchableOpacity>
     );
   };

@@ -2,23 +2,74 @@
  * ProductsData.js
  * 
  * Fetches all product catalog data from Supabase.
- * Replaces the old hardcoded 2696-line version with live API calls.
- * Includes in-memory caching to avoid repeated fetches.
+ * Uses a three-tier caching strategy:
+ *   1. In-memory cache (instant, within session)
+ *   2. AsyncStorage disk cache (instant cold starts)
+ *   3. Supabase fetch (background refresh every 24h)
  */
 
 import { supabase } from '../config/supabaseClient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ─── Cache ───
+// ─── Constants ───
+const CACHE_KEY = '@bsw_product_categories_v1';
+const CACHE_TIMESTAMP_KEY = '@bsw_product_categories_ts_v1';
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// ─── In-memory Cache ───
 let cachedCategories = null;
 
 /**
  * Load all top-level categories with their full nested data.
  * Returns the same structure as the old CATEGORIES array,
  * but with { uri: url } image sources instead of require().
+ * 
+ * Strategy:
+ *   1. Return in-memory cache if available (instant)
+ *   2. Return AsyncStorage cache if available (fast cold start)
+ *   3. Fetch from Supabase (network)
+ *   4. If using stale disk cache, refresh in background
  */
 export async function loadCategories() {
+  // 1. In-memory cache (instant)
   if (cachedCategories) return cachedCategories;
 
+  // 2. Try AsyncStorage disk cache
+  try {
+    const [cachedJson, cachedTs] = await Promise.all([
+      AsyncStorage.getItem(CACHE_KEY),
+      AsyncStorage.getItem(CACHE_TIMESTAMP_KEY),
+    ]);
+
+    if (cachedJson) {
+      const parsed = JSON.parse(cachedJson);
+      cachedCategories = parsed;
+      console.log('[ProductsData] Loaded from disk cache');
+
+      // Check if cache is stale
+      const age = Date.now() - parseInt(cachedTs || '0', 10);
+      if (age > CACHE_TTL) {
+        // Refresh in background (don't block the UI)
+        console.log('[ProductsData] Cache stale, refreshing in background...');
+        fetchAndCacheFromSupabase().catch(err =>
+          console.error('[ProductsData] Background refresh failed:', err.message)
+        );
+      }
+
+      return parsed;
+    }
+  } catch (e) {
+    console.log('[ProductsData] AsyncStorage read error:', e.message);
+  }
+
+  // 3. No cache — fetch from Supabase (blocks until done)
+  return fetchAndCacheFromSupabase();
+}
+
+/**
+ * Fetch fresh data from Supabase and update both caches.
+ */
+async function fetchAndCacheFromSupabase() {
   console.log('[ProductsData] Loading categories from Supabase...');
 
   const { data: cats, error: catError } = await supabase
@@ -28,7 +79,7 @@ export async function loadCategories() {
 
   if (catError) {
     console.error('[ProductsData] Error loading categories:', catError.message);
-    return [];
+    return cachedCategories || []; // Fall back to stale cache if available
   }
 
   // Load all subcategories at once (single query)
@@ -75,8 +126,18 @@ export async function loadCategories() {
     };
   });
 
+  // Update both caches
   cachedCategories = categories;
-  console.log(`[ProductsData] Loaded ${categories.length} categories`);
+  try {
+    await Promise.all([
+      AsyncStorage.setItem(CACHE_KEY, JSON.stringify(categories)),
+      AsyncStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString()),
+    ]);
+    console.log(`[ProductsData] Cached ${categories.length} categories to disk`);
+  } catch (e) {
+    console.log('[ProductsData] AsyncStorage write error:', e.message);
+  }
+
   return categories;
 }
 
@@ -111,10 +172,11 @@ export async function loadSubcategory(id) {
 }
 
 /**
- * Clear the cache (e.g. after updating products in Supabase)
+ * Clear both in-memory and disk caches (e.g. after updating products in Supabase)
  */
 export function clearCache() {
   cachedCategories = null;
+  AsyncStorage.multiRemove([CACHE_KEY, CACHE_TIMESTAMP_KEY]).catch(() => {});
 }
 
 // ─── BACKWARD COMPATIBILITY ───

@@ -11,12 +11,14 @@ import {
   RefreshControl,
   Platform,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
+import CachedImage from '../components/CachedImage';
 
 const { width } = Dimensions.get('window');
 const GRID_PADDING = 12;
@@ -34,27 +36,25 @@ const getCoverAspectRatio = (album) => {
   return Math.max(0.65, Math.min(ratio, 1.8));
 };
 
-// Build 2-column masonry layout
-const buildMasonryColumns = (albums) => {
-  const leftCol = [];
-  const rightCol = [];
-  let leftHeight = 0;
-  let rightHeight = 0;
+// Build dynamic masonry layout
+const buildMasonryColumns = (albums, numColumns = 2) => {
+  const columns = Array.from({ length: numColumns }, () => []);
+  const heights = Array.from({ length: numColumns }, () => 0);
 
   albums.forEach((album) => {
     const ratio = getCoverAspectRatio(album);
     const estimatedHeight = 1 / ratio;
 
-    if (leftHeight <= rightHeight) {
-      leftCol.push({ album, ratio });
-      leftHeight += estimatedHeight;
-    } else {
-      rightCol.push({ album, ratio });
-      rightHeight += estimatedHeight;
+    let minIdx = 0;
+    for (let i = 1; i < numColumns; i++) {
+      if (heights[i] < heights[minIdx]) minIdx = i;
     }
+
+    columns[minIdx].push({ album, ratio });
+    heights[minIdx] += estimatedHeight;
   });
 
-  return { leftCol, rightCol };
+  return columns;
 };
 
 const GalleryScreen = ({ navigation }) => {
@@ -64,6 +64,11 @@ const GalleryScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const isLandscape = windowWidth > windowHeight;
+  const numColumns = isTablet ? (isLandscape ? 4 : 3) : 2;
 
   const fetchAlbums = useCallback(async () => {
     try {
@@ -121,7 +126,7 @@ const GalleryScreen = ({ navigation }) => {
         })
       }
     >
-      <Image
+      <CachedImage
         source={{ uri: getCoverUrl(album) }}
         style={styles.coverImage}
         resizeMode="cover"
@@ -132,12 +137,12 @@ const GalleryScreen = ({ navigation }) => {
         style={styles.cardOverlay}
       />
       <View style={styles.cardContent}>
-        <Text style={styles.albumTitle} numberOfLines={2}>
+        <Text style={[styles.albumTitle, isTablet && { fontSize: 18 }]} numberOfLines={2}>
           {album.title._content}
         </Text>
         <View style={styles.countBadge}>
-          <Ionicons name="images-outline" size={12} color="#fff" />
-          <Text style={styles.countText}>{album.photos}</Text>
+          <Ionicons name="images-outline" size={isTablet ? 18 : 12} color="#fff" />
+          <Text style={[styles.countText, isTablet && { fontSize: 15 }]}>{album.photos}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -168,7 +173,7 @@ const GalleryScreen = ({ navigation }) => {
     album.title._content.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const { leftCol, rightCol } = buildMasonryColumns(filteredAlbums);
+  const masonryColumns = buildMasonryColumns(filteredAlbums, numColumns);
 
   return (
     <View style={styles.container}>
@@ -206,12 +211,11 @@ const GalleryScreen = ({ navigation }) => {
           }
         >
           <View style={styles.masonryContainer}>
-            <View style={styles.masonryColumn}>
-              {leftCol.map(({ album, ratio }) => renderAlbumTile(album, ratio))}
-            </View>
-            <View style={styles.masonryColumn}>
-              {rightCol.map(({ album, ratio }) => renderAlbumTile(album, ratio))}
-            </View>
+            {masonryColumns.map((col, idx) => (
+              <View key={idx} style={styles.masonryColumn}>
+                {col.map(({ album, ratio }) => renderAlbumTile(album, ratio))}
+              </View>
+            ))}
           </View>
         </ScrollView>
       </SafeAreaView>

@@ -22,6 +22,7 @@ import styles from "../components/style";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../config/supabaseClient";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import CachedImage from "../components/CachedImage";
 
 const { scale, width } = Dimensions.get("window");
 
@@ -61,6 +62,7 @@ const Brochures = () => {
   const BROCHURE_CARD_WIDTH = isTabletDynamic ? (isLandscape ? 220 : 200) : windowWidth * 0.34;
   const BROCHURE_CARD_HEIGHT = isTabletDynamic ? (isLandscape ? 280 : 250) : 190;
   const MAIN_LIST_HEIGHT = isTabletDynamic ? (isLandscape ? 360 : 330) : 260;
+  const CR_CARD_WIDTH = isTabletDynamic ? (isLandscape ? 300 : 280) : windowWidth * 0.6;
 
   const activeCategories = useMemo(() => {
     const active = new Set(["All"]);
@@ -200,7 +202,7 @@ const Brochures = () => {
           disabled={progress !== null}
         >
           <View style={style.cardBox}>
-            <Image
+            <CachedImage
               style={[style.image, { height: BROCHURE_CARD_HEIGHT }]}
               resizeMode="cover"
               source={{ uri: item.image }}
@@ -218,11 +220,11 @@ const Brochures = () => {
   const renderContinueReadingItem = ({ item }) => {
     return (
       <TouchableOpacity 
-         style={style.crCardContainer}
+         style={[style.crCardContainer, { width: CR_CARD_WIDTH }]}
          onPress={() => handleOpenBrochure(item)}
          activeOpacity={0.8}
       >
-          <Image source={{uri: item.image}} style={style.crImage} resizeMode="cover" />
+          <CachedImage source={{uri: item.image}} style={style.crImage} resizeMode="cover" />
           <View style={style.crTextWrap}>
               <View style={style.crTopRow}>
                  <FontAwesome5 name="star" size={10} color="#FFD700" solid />
@@ -308,19 +310,17 @@ const Brochures = () => {
                               </View>
                           </View>
                           <View style={style.heroImageWrap}>
-                            <Image 
+                            <CachedImage 
                                source={{ uri: item.image }} 
                                style={[style.heroBookImageStack, { right: 10, top: 45, transform: [{scale: 0.75}], opacity: 0.3, zIndex: 1 }]}
                                resizeMode="cover"
-                               blurRadius={8}
                             />
-                            <Image 
+                            <CachedImage 
                                source={{ uri: item.image }} 
                                style={[style.heroBookImageStack, { right: 30, top: 40, transform: [{scale: 0.85}], opacity: 0.7, zIndex: 2 }]}
                                resizeMode="cover"
-                               blurRadius={3}
                             />
-                            <Image 
+                            <CachedImage 
                                source={{ uri: item.image }} 
                                style={[style.heroBookImageStack, { right: 55, top: 35, zIndex: 3, shadowColor: "#000", shadowOffset: { width: -5, height: 5 }, shadowOpacity: 0.4, shadowRadius: 10 }]}
                                resizeMode="cover"
@@ -684,7 +684,6 @@ const style = StyleSheet.create({
     marginBottom: 10,
   },
   crCardContainer: {
-    width: width * 0.6,
     marginHorizontal: 10,
     backgroundColor: "#fff",
     borderRadius: 8,

@@ -19,6 +19,7 @@ import ImageViewer from 'react-native-image-zoom-viewer';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../config/supabaseClient';
+import CachedImage from '../components/CachedImage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -93,7 +94,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
         >
           {images.map((img, i) => (
             <TouchableOpacity key={i} style={[styles.carouselItem, isLanternProduct && isTablet && { width: (width * (isLandscape ? 0.64 : 0.58)) - 110 }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
-              <Image source={img.image} style={[styles.carouselImage, isLanternProduct && { height: isTablet ? 240 : 120 }]} resizeMode="contain" />
+              <CachedImage source={img.image} style={[styles.carouselImage, isLanternProduct && { height: isTablet ? 240 : 120 }]} resizeMode="contain" />
               <Text style={styles.carouselLabel}>{img.label}</Text>
             </TouchableOpacity>
           ))}
@@ -250,7 +251,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
     <View style={styles.overviewSection}>
       {/* Hero Image - ONLY rendered here if Mobile. On Tablet, it's sticky on left pane */}
       {!isTablet && (
-        <Image 
+        <CachedImage 
           source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} 
           style={[
             styles.heroImage,
@@ -313,7 +314,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
                 activeOpacity={0.8}
                 onPress={() => openGalleryImage(index)}
               >
-                <Image 
+                <CachedImage 
                   source={{ uri: photo.url_m || buildPhotoUrl(photo, 'z') }} 
                   style={styles.galleryImage} 
                 />
@@ -345,7 +346,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           {/* Overview image (e.g. full locking points diagram) */}
           {detail.overviewImage && (
             <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(detail.overviewImage, detail.title)}>
-              <Image source={detail.overviewImage} style={styles.overviewImage} resizeMode={detail.overviewImageMode || "contain"} />
+              <CachedImage source={detail.overviewImage} style={styles.overviewImage} resizeMode={detail.overviewImageMode || "contain"} />
             </TouchableOpacity>
           )}
           {/* Image grid (styles, security points, hardware) */}
@@ -354,7 +355,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
               {detail.images.map((img, i) => (
                 <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
                   <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
-                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                    <CachedImage source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
                 </TouchableOpacity>
@@ -387,7 +388,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
               {colourGroup.swatches.map((swatch, i) => (
                 <TouchableOpacity key={i} style={[styles.swatchItem, isTablet && { width: isLandscape ? '15%' : '22%' }]} activeOpacity={0.8} onPress={() => openImage(swatch.image, swatch.label)}>
                   <View style={styles.swatchImageWrapper}>
-                    <Image source={swatch.image} style={styles.swatchImage} resizeMode="cover" />
+                    <CachedImage source={swatch.image} style={styles.swatchImage} resizeMode="cover" />
                   </View>
                   <Text style={styles.swatchLabel}>{swatch.label}</Text>
                 </TouchableOpacity>
@@ -416,7 +417,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
               {glassOption.images.map((img, i) => (
                 <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
                   <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
-                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                    <CachedImage source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
                 </TouchableOpacity>
@@ -442,7 +443,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
           <Text style={styles.detailContent}>{styleGroup.content}</Text>
           {styleGroup.overviewImage && (
             <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(styleGroup.overviewImage, styleGroup.title)}>
-              <Image source={styleGroup.overviewImage} style={styles.overviewImage} resizeMode={styleGroup.overviewImageMode || "contain"} />
+              <CachedImage source={styleGroup.overviewImage} style={styles.overviewImage} resizeMode={styleGroup.overviewImageMode || "contain"} />
             </TouchableOpacity>
           )}
           {styleGroup.images && styleGroup.images.length > 0 && (
@@ -450,7 +451,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
               {styleGroup.images.map((img, i) => (
                 <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
                   <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
-                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                    <CachedImage source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
                 </TouchableOpacity>
@@ -477,7 +478,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
               {hardwareGroup.images.map((img, i) => (
                 <TouchableOpacity key={i} style={[styles.imageGridItem, isTablet && { width: isLandscape ? '22%' : '31%' }]} activeOpacity={0.8} onPress={() => openImage(img.image, img.label)}>
                   <View style={[styles.gridImageWrapper, img.fullHeight && { padding: 0 }, isLanternProduct && { height: isTablet ? 70 : 60 }]}>
-                    <Image source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
+                    <CachedImage source={img.image} style={[styles.gridImage, img.fullHeight && { height: '100%' }]} resizeMode={img.resizeMode || "contain"} />
                   </View>
                   <Text style={styles.gridLabel}>{img.label}</Text>
                 </TouchableOpacity>
@@ -498,7 +499,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
             <Text style={styles.detailTitle}>{extra.title}</Text>
             {extra.image && (
               <TouchableOpacity activeOpacity={0.8} onPress={() => openImage(extra.image, extra.title)}>
-                <Image source={extra.image} style={styles.extraImage} resizeMode="cover" />
+                <CachedImage source={extra.image} style={styles.extraImage} resizeMode="cover" />
               </TouchableOpacity>
             )}
             <Text style={styles.detailContent}>{extra.content}</Text>
@@ -530,7 +531,7 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
             >
               {/* Brochure Cover Image */}
               <View style={[styles.brochureCoverWrapper, isTablet && styles.brochureCoverWrapperTablet]}>
-                <Image
+                <CachedImage
                   source={{ uri: brochure.image }}
                   style={styles.brochureCoverImage}
                   resizeMode="cover"
@@ -670,11 +671,11 @@ export default function CatalogProductDetailsScreen({ route, navigation }) {
     <View style={[styles.leftPaneTablet, { width: isLandscape ? '36%' : '42%' }]}>
       
       {/* Hero Image (Top) */}
-      <Image 
+      <CachedImage 
         source={typeof product.heroImage === 'string' ? { uri: product.heroImage } : product.heroImage} 
         style={[
           styles.tabletHeroImage,
-          !isWindowProduct && { height: isLandscape ? 360 : 480 } // Shrink on landscape so it fits!
+          !isWindowProduct && { height: isLandscape ? 360 : 480 }
         ]} 
         resizeMode="cover"
       />

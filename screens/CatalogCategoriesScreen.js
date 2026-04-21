@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadCategories } from '../data/ProductsData';
 import { MaterialIcons } from '@expo/vector-icons';
+import CachedImage from '../components/CachedImage';
 
 export default function CatalogCategoriesScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const isLandscape = windowWidth > windowHeight;
+  
+  const ROW_TALL_HEIGHT = isTablet && !isLandscape ? 360 : 260;
+  const ROW_WIDE_HEIGHT = isTablet && !isLandscape ? 180 : 130;
 
   useEffect(() => {
     loadCategories()
@@ -43,6 +51,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
   const BentoCard = ({ item, style, titleStyle }) => {
     if (!item) return null;
     const imageSource = typeof item.image === 'string' ? { uri: item.image } : item.image;
+    const isRemote = imageSource && typeof imageSource === 'object' && imageSource.uri;
 
     return (
       <TouchableOpacity 
@@ -50,16 +59,26 @@ export default function CatalogCategoriesScreen({ navigation }) {
         style={[styles.cardContainer, style]}
         onPress={() => handleCategoryPress(item)}
       >
-        <ImageBackground 
-          source={imageSource}
-          style={styles.imageBackground}
-          imageStyle={{ borderRadius: 16 }}
-        >
-          <View style={styles.overlay}>
-            <Text style={[styles.cardTitle, titleStyle]}>{item.title}</Text>
-            <MaterialIcons name="arrow-forward-ios" size={16} color="#fff" />
+        {isRemote ? (
+          <View style={[styles.imageBackground, { overflow: 'hidden', borderRadius: 16 }]}>
+            <CachedImage source={imageSource} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <View style={styles.overlay}>
+              <Text style={[styles.cardTitle, isTablet && { fontSize: 22 }, titleStyle, isTablet && titleStyle === styles.titleVertical && { fontSize: 28 }]}>{item.title}</Text>
+              <MaterialIcons name="arrow-forward-ios" size={isTablet ? 24 : 16} color="#fff" />
+            </View>
           </View>
-        </ImageBackground>
+        ) : (
+          <ImageBackground 
+            source={imageSource}
+            style={styles.imageBackground}
+            imageStyle={{ borderRadius: 16 }}
+          >
+            <View style={styles.overlay}>
+              <Text style={[styles.cardTitle, isTablet && { fontSize: 22 }, titleStyle, isTablet && titleStyle === styles.titleVertical && { fontSize: 28 }]}>{item.title}</Text>
+              <MaterialIcons name="arrow-forward-ios" size={isTablet ? 24 : 16} color="#fff" />
+            </View>
+          </ImageBackground>
+        )}
       </TouchableOpacity>
     );
   };
@@ -86,37 +105,69 @@ export default function CatalogCategoriesScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ROW 1: Vertical Door + 2 Squares */}
-        <View style={styles.bentoRowTall}>
-          <BentoCard 
-            item={getItem('doors')} 
-            style={[styles.bentoVertical, { marginRight: 16 }]} 
-            titleStyle={styles.titleVertical}
-          />
-          <View style={styles.bentoColumn}>
-            <BentoCard item={getItem('windows')} style={[styles.bentoSquare, { marginBottom: 16 }]} />
-            <BentoCard item={getItem('roof-lanterns')} style={styles.bentoSquare} />
+        {isTablet && isLandscape ? (
+          <View style={{ flexDirection: 'row', gap: 16, height: windowHeight * 0.75 }}>
+            {/* Column 1 */}
+            <View style={{ flex: 1, flexDirection: 'column' }}>
+              <BentoCard 
+                item={getItem('doors')} 
+                style={{ flex: 2, marginBottom: 16 }} 
+                titleStyle={styles.titleVertical}
+              />
+              <BentoCard item={getItem('repairs')} style={{ flex: 1 }} />
+            </View>
+
+            {/* Column 2 */}
+            <View style={{ flex: 1, flexDirection: 'column' }}>
+              <BentoCard item={getItem('windows')} style={{ flex: 1, marginBottom: 16 }} />
+              <BentoCard item={getItem('living-spaces')} style={{ flex: 1, marginBottom: 16 }} />
+              <BentoCard item={getItem('skyrooms')} style={{ flex: 1 }} />
+            </View>
+
+            {/* Column 3 */}
+            <View style={{ flex: 1, flexDirection: 'column' }}>
+              <BentoCard item={getItem('roof-lanterns')} style={{ flex: 1, marginBottom: 16 }} />
+              <BentoCard 
+                item={getItem('commercial-work')} 
+                style={{ flex: 2 }} 
+                titleStyle={styles.titleVertical}
+              />
+            </View>
           </View>
-        </View>
+        ) : (
+          <>
+            {/* ROW 1: Vertical Door + 2 Squares */}
+            <View style={[styles.bentoRowTall, { height: ROW_TALL_HEIGHT }]}>
+              <BentoCard 
+                item={getItem('doors')} 
+                style={[styles.bentoVertical, { marginRight: 16 }]} 
+                titleStyle={styles.titleVertical}
+              />
+              <View style={styles.bentoColumn}>
+                <BentoCard item={getItem('windows')} style={[styles.bentoSquare, { marginBottom: 16 }]} />
+                <BentoCard item={getItem('roof-lanterns')} style={styles.bentoSquare} />
+              </View>
+            </View>
 
-        {/* ROW 2: 2 Squares + Vertical Commercial */}
-        <View style={styles.bentoRowTall}>
-          <View style={[styles.bentoColumn, { marginRight: 16 }]}>
-            <BentoCard item={getItem('repairs')} style={[styles.bentoSquare, { marginBottom: 16 }]} />
-            <BentoCard item={getItem('living-spaces')} style={styles.bentoSquare} />
-          </View>
-          <BentoCard 
-            item={getItem('commercial-work')} 
-            style={styles.bentoVertical} 
-            titleStyle={styles.titleVertical}
-          />
-        </View>
+            {/* ROW 2: 2 Squares + Vertical Commercial */}
+            <View style={[styles.bentoRowTall, { height: ROW_TALL_HEIGHT }]}>
+              <View style={[styles.bentoColumn, { marginRight: 16 }]}>
+                <BentoCard item={getItem('repairs')} style={[styles.bentoSquare, { marginBottom: 16 }]} />
+                <BentoCard item={getItem('living-spaces')} style={styles.bentoSquare} />
+              </View>
+              <BentoCard 
+                item={getItem('commercial-work')} 
+                style={styles.bentoVertical} 
+                titleStyle={styles.titleVertical}
+              />
+            </View>
 
-        {/* ROW 4: Wide Horizontal (Skyrooms) */}
-        <View style={[styles.bentoRowWide, { marginBottom: 40 }]}>
-          <BentoCard item={getItem('skyrooms')} style={styles.bentoHorizontal} />
-        </View>
-
+            {/* ROW 4: Wide Horizontal (Skyrooms) */}
+            <View style={[styles.bentoRowWide, { height: ROW_WIDE_HEIGHT, marginBottom: 40 }]}>
+              <BentoCard item={getItem('skyrooms')} style={styles.bentoHorizontal} />
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Modal, Animated, useWindowDimensions, TextInput } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, Modal, Animated, useWindowDimensions, TextInput, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
@@ -9,6 +9,8 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import PrimaryButton from "../components/PrimaryButton";
 import { BlurView } from "expo-blur";
 import * as FileSystem from "expo-file-system";
+import { decode } from "base64-arraybuffer";
+import { supabase } from '../config/supabaseClient';
 
 const ALL_COLORS = [
   "White", "White Grain", "Ice Cream", "Ice Cream Grained", "Ice Cream on White", "Cherrywood", "Cherrywood on White",
@@ -53,6 +55,13 @@ export default function VisualiserScreen({ navigation }) {
   const [dropdownSelected, setDropdownSelected] = useState("");
   const [dropdownOnSelect, setDropdownOnSelect] = useState(() => () => {});
   const [dropdownTitle, setDropdownTitle] = useState("");
+
+  const [showEnquiry, setShowEnquiry] = useState(false);
+  const [enquirySuccess, setEnquirySuccess] = useState(false);
+  const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
+  const [enquiryForm, setEnquiryForm] = useState({
+    name: '', email: '', phone: '', postcode: '', feedback: ''
+  });
 
   const openDropdown = (title, options, selected, onSelect) => {
     setDropdownTitle(title);
@@ -103,7 +112,7 @@ export default function VisualiserScreen({ navigation }) {
 
   const pickImage = async (useCamera = false) => {
     if (limitReached) {
-      Alert.alert("Limit Reached", "You have reached your visualization limit for this device.");
+      Alert.alert("Limit Reached", "You have reached your daily visualization limit (5 generations) for this device.");
       return;
     }
 
@@ -139,7 +148,7 @@ export default function VisualiserScreen({ navigation }) {
     }
 
     if (limitReached) {
-      Alert.alert("Limit Reached", "You have reached the maximum allowed generations for this device.");
+      Alert.alert("Limit Reached", "You have reached your daily visualization limit (5 generations) for this device.");
       return;
     }
 
@@ -194,6 +203,193 @@ export default function VisualiserScreen({ navigation }) {
     }
   };
 
+  const uploadImage = async (base64Uri, pathPrefix) => {
+    if (!base64Uri) return null;
+    try {
+      const base64Data = base64Uri.split(",")[1] || base64Uri;
+      if (!base64Data) return null;
+      let filePath = base64Uri;
+      if (base64Uri.startsWith('data:')) {
+         filePath = FileSystem.cacheDirectory + `temp_${Date.now()}.jpg`;
+         await FileSystem.writeAsStringAsync(filePath, base64Data, { encoding: FileSystem.EncodingType.Base64 });
+      } else if (!base64Uri.startsWith('file://')) {
+         filePath = FileSystem.cacheDirectory + `temp_${Date.now()}.jpg`;
+         await FileSystem.writeAsStringAsync(filePath, base64Data, { encoding: FileSystem.EncodingType.Base64 });
+      }
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      if (!fileInfo.exists) return null;
+      const fileString = await FileSystem.readAsStringAsync(filePath, { encoding: FileSystem.EncodingType.Base64 });
+      const arrayBuffer = decode(fileString);
+      const fileName = `${pathPrefix}-${Date.now()}.jpg`;
+      const { data, error } = await supabase.storage.from('door-enquiries').upload(fileName, arrayBuffer, { contentType: 'image/jpeg' });
+      if (error) { console.error(`[Upload] error for ${pathPrefix}:`, error); return null; }
+      const { data: { publicUrl } } = supabase.storage.from('door-enquiries').getPublicUrl(fileName);
+      return publicUrl;
+    } catch (err) {
+      console.error(`[Upload] Exception for ${pathPrefix}:`, err);
+      return null;
+    }
+  };
+
+  const handleSubmitEnquiry = async () => {
+    if (!enquiryForm.name.trim() || !enquiryForm.email.trim()) {
+      Alert.alert('Required', 'Please enter your name and email.');
+      return;
+    }
+    setSubmittingEnquiry(true);
+    try {
+      let originalImageUrl = null;
+      if (imageUri) {
+         originalImageUrl = await uploadImage(imageUri, 'visualiser-request-photo');
+      }
+      let configText = `Visualiser Configuration:\n- Window Colour: ${windowColor}`;
+      if (doorColor && doorColor !== "None") configText += `\n- Door Colour: ${doorColor}`;
+      if (style && style !== "Keep Existing") configText += `\n- Style: ${style}`;
+      if (customPrompt) configText += `\n- Custom Instructions: ${customPrompt}`;
+      const finalFeedback = [enquiryForm.feedback, configText, "THIS IS A DAILY LIMIT UNLOCK REQUEST"].filter(Boolean).join('\n\n');
+      const SUPABASE_URL = 'https://kmrfnaurkbmkkoumfnxp.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcmZuYXVya2Jta2tvdW1mbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNjY4NTAsImV4cCI6MjA5MTg0Mjg1MH0.V64OETndBlnMMn7ymtv2M3e5GmX3ROk1FwbIaC1_N1k';
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-door-enquiry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          name: enquiryForm.name, email: enquiryForm.email, phone: enquiryForm.phone, postcode: enquiryForm.postcode,
+          feedback: finalFeedback, outsideImageUrl: null, insideImageUrl: null, viewOnHomeImageUrl: null,
+          originalImageUrl: originalImageUrl, doorSpec: {}
+        }),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setEnquirySuccess(true);
+      } else {
+        Alert.alert('Error', result.error || 'Failed to send enquiry. Please try again.');
+      }
+    } catch (err) {
+      console.error('[VisualiserEnquiry] error:', err);
+      Alert.alert('Error', 'An unexpected error occurred. Please check your connection.');
+    } finally {
+      setSubmittingEnquiry(false);
+    }
+  };
+
+  const renderEnquiryModal = () => (
+    <Modal visible={showEnquiry} animationType="slide" transparent={true}>
+      <View style={styles.modalOverlayEnquiry}>
+        <View style={styles.modalContentEnquiry}>
+          {enquirySuccess ? (
+            <View style={styles.successContainerEnquiry}>
+              <View style={styles.successIconWrapperEnquiry}>
+                <Feather name="check-circle" size={50} color="#10B981" />
+              </View>
+              <Text style={styles.successTitleEnquiry}>Enquiry Sent!</Text>
+              <Text style={styles.successTextEnquiry}>Thank you for your request. Our team will review your details and get back to you shortly.</Text>
+              <TouchableOpacity 
+                style={styles.successButtonEnquiry}
+                onPress={() => { setShowEnquiry(false); setEnquirySuccess(false); setSubmittingEnquiry(false); }}
+              >
+                <Text style={styles.successButtonTextEnquiry}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View style={styles.modalHeaderEnquiry}>
+                <Text style={styles.modalTitleEnquiry}>Send Enquiry</Text>
+                <TouchableOpacity onPress={() => setShowEnquiry(false)} style={styles.modalCloseBtnEnquiry}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView 
+                style={styles.modalScrollEnquiry} 
+                contentContainerStyle={styles.modalScrollContentEnquiry}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={styles.modalInstructionsEnquiry}>
+                  Fill out your details below and we'll send it directly to our team to request your unlock limit.
+                </Text>
+                <View style={styles.inputGroupEnquiry}>
+                  <Text style={styles.inputLabelEnquiry}>Name *</Text>
+                  <TextInput
+                    style={styles.textInputEnquiry}
+                    value={enquiryForm.name}
+                    onChangeText={(t) => setEnquiryForm(f => ({ ...f, name: t }))}
+                    placeholder="Your full name"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+                <View style={styles.inputGroupEnquiry}>
+                  <Text style={styles.inputLabelEnquiry}>Email *</Text>
+                  <TextInput
+                    style={styles.textInputEnquiry}
+                    value={enquiryForm.email}
+                    onChangeText={(t) => setEnquiryForm(f => ({ ...f, email: t }))}
+                    placeholder="hello@example.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    placeholderTextColor="#A0AEC0"
+                  />
+                </View>
+                <View style={[styles.inputGroupEnquiry, styles.rowGroupEnquiry]}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.inputLabelEnquiry}>Phone (Optional)</Text>
+                    <TextInput
+                      style={styles.textInputEnquiry}
+                      value={enquiryForm.phone}
+                      onChangeText={(t) => setEnquiryForm(f => ({ ...f, phone: t }))}
+                      placeholder="07..."
+                      keyboardType="phone-pad"
+                      placeholderTextColor="#A0AEC0"
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.inputLabelEnquiry}>Postcode (Optional)</Text>
+                    <TextInput
+                      style={styles.textInputEnquiry}
+                      value={enquiryForm.postcode}
+                      onChangeText={(t) => setEnquiryForm(f => ({ ...f, postcode: t }))}
+                      placeholder="Postcode"
+                      autoCapitalize="characters"
+                      placeholderTextColor="#A0AEC0"
+                    />
+                  </View>
+                </View>
+                <View style={styles.inputGroupEnquiry}>
+                  <Text style={styles.inputLabelEnquiry}>Additional Notes</Text>
+                  <TextInput
+                    style={[styles.textInputEnquiry, styles.textAreaEnquiry]}
+                    value={enquiryForm.feedback}
+                    onChangeText={(t) => setEnquiryForm(f => ({ ...f, feedback: t }))}
+                    placeholder="Any additional details..."
+                    placeholderTextColor="#A0AEC0"
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                  />
+                </View>
+              </ScrollView>
+              <View style={styles.modalButtonsEnquiry}>
+                <TouchableOpacity style={styles.cancelButtonEnquiry} onPress={() => setShowEnquiry(false)}>
+                  <Text style={styles.cancelButtonTextEnquiry}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.submitButtonEnquiry} onPress={handleSubmitEnquiry} disabled={submittingEnquiry}>
+                  <LinearGradient colors={['#e5040a', '#B80008']} style={styles.submitButtonGradientEnquiry}>
+                    {submittingEnquiry ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <Feather name="send" size={16} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.submitButtonTextEnquiry}>Submit</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+
   const DropdownInput = ({ label, value, options, onSelect }) => (
     <View style={styles.dropdownContainer}>
         <Text style={styles.dropdownLabel}>{label}</Text>
@@ -208,68 +404,142 @@ export default function VisualiserScreen({ navigation }) {
     </View>
   );
 
+  const renderImageUploader = () => (
+    <View style={[styles.uploadSection, isTablet && isLandscape && { marginBottom: 0, flex: 1 }]}>
+      {imageUri ? (
+        <Image source={{ uri: imageUri }} style={[styles.previewImage, isTablet && { height: 300 }]} />
+      ) : (
+        <View style={[styles.placeholderContainer, isTablet && { height: 260 }]}>
+          <Ionicons name="home-outline" size={isTablet ? 56 : 48} color="#9CA3AF" />
+          <Text style={styles.placeholderText}>Upload front or rear of house</Text>
+        </View>
+      )}
+      
+      <View style={styles.uploadButtonsRow}>
+        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(true)}>
+          <Ionicons name="camera" size={20} color="#fff" />
+          <Text style={styles.uploadButtonText}>Camera</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.uploadButtonAlt} onPress={() => pickImage(false)}>
+          <Ionicons name="images" size={20} color="#111827" />
+          <Text style={styles.uploadButtonAltText}>Gallery</Text>
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity style={styles.clearButton} onPress={() => setImageUri(null)}>
+          <Text style={styles.clearButtonText}>Clear Image</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.title}>AI Visualiser</Text>
         <Text style={styles.subtitle}>See what new windows and doors will look like on your house.</Text>
 
-        {/* Image Uploader */}
-        <View style={styles.uploadSection}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={[styles.previewImage, isTablet && { height: 300 }]} />
-          ) : (
-            <View style={[styles.placeholderContainer, isTablet && { height: 260 }]}>
-              <Ionicons name="home-outline" size={isTablet ? 56 : 48} color="#9CA3AF" />
-              <Text style={styles.placeholderText}>Upload front or rear of house</Text>
+        {!(isTablet && isLandscape) && renderImageUploader()}
+
+        {isTablet && isLandscape ? (
+          <View style={{ flexDirection: 'row', gap: 24, marginBottom: 32 }}>
+            <View style={{ flex: 1 }}>
+              {renderImageUploader()}
             </View>
-          )}
-          
-          <View style={styles.uploadButtonsRow}>
-            <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage(true)}>
-              <Ionicons name="camera" size={20} color="#fff" />
-              <Text style={styles.uploadButtonText}>Camera</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.uploadButtonAlt} onPress={() => pickImage(false)}>
-              <Ionicons name="images" size={20} color="#111827" />
-              <Text style={styles.uploadButtonAltText}>Gallery</Text>
-            </TouchableOpacity>
+            <View style={{ flex: 1.2, flexDirection: 'column' }}>
+              <View style={{ flexDirection: 'row', gap: 16 }}>
+                <View style={{ flex: 1 }}>
+                  <DropdownInput label="Window Colour" value={windowColor} options={WINDOW_COLORS} onSelect={setWindowColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <DropdownInput label="Door Colour (Optional)" value={doorColor} options={DOOR_COLORS} onSelect={setDoorColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
+                </View>
+              </View>
+              <View style={[styles.customPromptContainer, { flex: 1, marginBottom: 0 }]}>
+                <Text style={styles.dropdownLabel}>Custom Instructions (Optional)</Text>
+                <TextInput 
+                  style={[styles.customPromptInput, { flex: 1 }]}
+                  placeholder="e.g. Change the guttering colour to black..."
+                  placeholderTextColor="#9CA3AF"
+                  value={customPrompt}
+                  onChangeText={setCustomPrompt}
+                  multiline
+                />
+              </View>
+            </View>
           </View>
-          <TouchableOpacity style={styles.clearButton} onPress={() => setImageUri(null)}>
-              <Text style={styles.clearButtonText}>Clear Image</Text>
-          </TouchableOpacity>
-        </View>
-
-
-
-        {/* Configuration Form */}
-        <View style={[styles.configSection, isTablet && styles.configSectionTablet]}>
-          <View style={isTablet ? { flex: 1 } : null}>
-            <DropdownInput label="Window Colour" value={windowColor} options={WINDOW_COLORS} onSelect={setWindowColor} />
+        ) : isTablet ? (
+          <View style={{ flexDirection: 'row', gap: 24, marginBottom: 8 }}>
+            <View style={{ flex: 1 }}>
+              <DropdownInput label="Window Colour" value={windowColor} options={WINDOW_COLORS} onSelect={setWindowColor} />
+              <DropdownInput label="Door Colour (Optional)" value={doorColor} options={DOOR_COLORS} onSelect={setDoorColor} />
+              <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={[styles.customPromptContainer, { flex: 1 }]}>
+                <Text style={styles.dropdownLabel}>Custom Instructions (Optional)</Text>
+                <TextInput 
+                  style={[styles.customPromptInput, { flex: 1 }]}
+                  placeholder="e.g. Change the guttering colour to black..."
+                  placeholderTextColor="#9CA3AF"
+                  value={customPrompt}
+                  onChangeText={setCustomPrompt}
+                  multiline
+                />
+              </View>
+            </View>
           </View>
-          <View style={isTablet ? { flex: 1 } : null}>
-            <DropdownInput label="Door Colour (Optional)" value={doorColor} options={DOOR_COLORS} onSelect={setDoorColor} />
-          </View>
-          <View style={isTablet ? { flex: 1 } : null}>
-            <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
-          </View>
-        </View>
+        ) : (
+          <>
+            <View style={styles.configSection}>
+              <DropdownInput label="Window Colour" value={windowColor} options={WINDOW_COLORS} onSelect={setWindowColor} />
+              <DropdownInput label="Door Colour (Optional)" value={doorColor} options={DOOR_COLORS} onSelect={setDoorColor} />
+              <DropdownInput label="Style (Optional)" value={style} options={STYLES} onSelect={setStyle} />
+            </View>
 
-        {/* Custom Prompt */}
-        <View style={styles.customPromptContainer}>
-          <Text style={styles.dropdownLabel}>Custom Instructions (Optional)</Text>
-          <TextInput 
-            style={styles.customPromptInput}
-            placeholder="e.g. Change the guttering colour to black..."
-            placeholderTextColor="#9CA3AF"
-            value={customPrompt}
-            onChangeText={setCustomPrompt}
-            multiline
-          />
-        </View>
+            <View style={styles.customPromptContainer}>
+              <Text style={styles.dropdownLabel}>Custom Instructions (Optional)</Text>
+              <TextInput 
+                style={styles.customPromptInput}
+                placeholder="e.g. Change the guttering colour to black..."
+                placeholderTextColor="#9CA3AF"
+                value={customPrompt}
+                onChangeText={setCustomPrompt}
+                multiline
+              />
+            </View>
+          </>
+        )}
 
         {limitReached ? (
-          <View style={styles.limitContainer}>
-            <Text style={styles.limitText}>Generation limit reached for this device.</Text>
+          <View style={styles.limitReachedCard}>
+            <View style={styles.limitHeader}>
+              <Ionicons name="sparkles" size={24} color="#F59E0B" />
+              <Text style={styles.limitCardTitle}>Daily Limit Reached</Text>
+            </View>
+            <Text style={styles.limitCardDesc}>
+              You've reached your 5 daily AI generations! It looks like you're exploring some great options.
+            </Text>
+            <Text style={styles.limitCardDesc}>
+              To unlock unlimited generation, simply submit an enquiry with your favorite design so far, and one of our experts will assist you. Alternatively, take full control with our interactive designer.
+            </Text>
+            <View style={styles.limitButtonsRow}>
+              <TouchableOpacity 
+                style={styles.limitPrimaryButton}
+                onPress={() => navigation.navigate("WindowDesignScreen")}
+              >
+                <Ionicons name="color-palette-outline" size={18} color="#fff" />
+                <Text style={styles.limitPrimaryButtonText}>Interactive Designer</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.limitSecondaryButton}
+                onPress={() => setShowEnquiry(true)}
+              >
+                <Ionicons name="mail-outline" size={18} color="#1E3A8A" />
+                <Text style={styles.limitSecondaryButtonText}>Submit Enquiry</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           <View style={{ marginTop: 16 }}>
@@ -378,6 +648,7 @@ export default function VisualiserScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+      {renderEnquiryModal()}
     </ScrollView>
   );
 }
@@ -750,6 +1021,72 @@ const styles = StyleSheet.create({
     maxHeight: '70%',
     paddingBottom: 24,
   },
+  limitReachedCard: {
+    backgroundColor: '#FFF8F1',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    marginTop: 16,
+  },
+  limitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  limitCardTitle: {
+    fontFamily: 'InterBold',
+    fontSize: 20,
+    color: '#92400E',
+  },
+  limitCardDesc: {
+    fontFamily: 'InterMedium',
+    fontSize: 15,
+    color: '#B45309',
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  limitButtonsRow: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 8,
+  },
+  limitPrimaryButton: {
+    backgroundColor: '#1E3A8A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  limitPrimaryButtonText: {
+    color: '#FFF',
+    fontFamily: 'InterSemiBold',
+    fontSize: 15,
+  },
+  limitSecondaryButton: {
+    backgroundColor: '#FFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E3A8A',
+    gap: 8,
+  },
+  limitSecondaryButtonText: {
+    color: '#1E3A8A',
+    fontFamily: 'InterSemiBold',
+    fontSize: 15,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -790,4 +1127,29 @@ const styles = StyleSheet.create({
     color: '#1E3A8A',
     fontFamily: 'InterBold',
   },
+  modalOverlayEnquiry: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContentEnquiry: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
+  modalHeaderEnquiry: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  modalTitleEnquiry: { fontSize: 18, fontFamily: 'InterBold', color: '#111' },
+  modalCloseBtnEnquiry: { padding: 4 },
+  modalScrollEnquiry: { paddingHorizontal: 24, marginVertical: 16 },
+  modalScrollContentEnquiry: { paddingBottom: 10 },
+  modalInstructionsEnquiry: { fontSize: 14, fontFamily: 'InterMedium', color: '#666', lineHeight: 20, marginBottom: 20 },
+  inputGroupEnquiry: { marginBottom: 16 },
+  rowGroupEnquiry: { flexDirection: 'row' },
+  inputLabelEnquiry: { fontSize: 13, fontFamily: 'InterSemiBold', color: '#374151', marginBottom: 6 },
+  textInputEnquiry: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, fontFamily: 'InterMedium', color: '#111', backgroundColor: '#fafafa' },
+  textAreaEnquiry: { minHeight: 80, paddingTop: 12 },
+  modalButtonsEnquiry: { flexDirection: 'row', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 30, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  cancelButtonEnquiry: { flex: 1, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: '#f3f4f6', marginRight: 8 },
+  cancelButtonTextEnquiry: { color: '#4B5563', fontSize: 15, fontFamily: 'InterSemiBold' },
+  submitButtonEnquiry: { flex: 1, marginLeft: 8 },
+  submitButtonGradientEnquiry: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12 },
+  submitButtonTextEnquiry: { color: '#fff', fontSize: 15, fontFamily: 'InterSemiBold' },
+  successContainerEnquiry: { alignItems: 'center', justifyContent: 'center', padding: 40 },
+  successIconWrapperEnquiry: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  successTitleEnquiry: { fontSize: 24, fontFamily: 'InterBold', color: '#111', marginBottom: 12 },
+  successTextEnquiry: { fontSize: 15, fontFamily: 'InterMedium', color: '#6B7280', textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+  successButtonEnquiry: { backgroundColor: '#111', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12, width: '100%', alignItems: 'center' },
+  successButtonTextEnquiry: { color: '#fff', fontSize: 16, fontFamily: 'InterSemiBold' },
 });

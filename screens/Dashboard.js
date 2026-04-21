@@ -1,10 +1,11 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, Image, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, Image, TextInput, useWindowDimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { loadCategories } from '../data/ProductsData';
+import CachedImage from '../components/CachedImage';
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -201,7 +202,11 @@ const heroSlides = [
                         </View>
                       ) : (
                         <View style={[styles.searchResultImage, { position: 'relative', overflow: 'hidden' }]}>
-                          <Image source={typeof item.image === 'number' ? item.image : (typeof item.cardImage === 'number' ? item.cardImage : item.heroImage)} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
+                          {typeof item.image === 'number' || typeof item.cardImage === 'number' ? (
+                            <Image source={typeof item.image === 'number' ? item.image : item.cardImage} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
+                          ) : (
+                            <CachedImage source={item.heroImage || item.image || item.cardImage} style={{ width: '100%', height: '100%', position: 'absolute' }} resizeMode="cover" />
+                          )}
                           {item.overlayImage && (
                             <Image source={item.overlayImage} style={{ width: '100%', height: '100%', position: 'absolute', bottom: 0, right: 0 }} resizeMode="contain" />
                           )}
@@ -384,7 +389,7 @@ const heroSlides = [
                   {categories.map((cat) => (
                      <TouchableOpacity key={cat.id} style={[styles.categoryItem, isTabletDynamic && isLandscape && { marginRight: 20 }]} onPress={() => handleCategoryPress(cat)}>
                         <View style={[styles.catImageProps, isTabletDynamic && isLandscape && { width: 175, height: 175 }]}>
-                          <Image source={cat.image} style={styles.catImage} />
+                          <CachedImage source={cat.image} style={styles.catImage} />
                         </View>
                         <Text style={[styles.catName, isTabletDynamic && isLandscape && { fontSize: 18, marginTop: 8 }]}>{cat.title}</Text>
                      </TouchableOpacity>

@@ -1,23 +1,35 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const VISUALISER_USAGE_KEY = '@visualiser_generation_count';
-const MAX_GENERATIONS = 99999;
+const VISUALISER_USAGE_KEY = '@visualiser_daily_usage_v1';
+const MAX_GENERATIONS = 5;
 
-/**
- * Gets the current number of generations this device has performed.
- */
-export const getGenerationCount = async () => {
+const getTodayDateString = () => new Date().toISOString().split('T')[0];
+
+const getDailyData = async () => {
   try {
     const value = await AsyncStorage.getItem(VISUALISER_USAGE_KEY);
-    return value ? parseInt(value, 10) : 0;
+    if (value) {
+      const data = JSON.parse(value);
+      if (data.date === getTodayDateString()) {
+        return data;
+      }
+    }
   } catch (error) {
-    console.error("Failed to fetch generation count", error);
-    return 0;
+    console.error("Failed to fetch daily generation data", error);
   }
+  return { date: getTodayDateString(), count: 0 };
 };
 
 /**
- * Checks if the user has reached the maximum allowed generations.
+ * Gets the current number of generations this device has performed today.
+ */
+export const getGenerationCount = async () => {
+  const data = await getDailyData();
+  return data.count;
+};
+
+/**
+ * Checks if the user has reached the maximum allowed generations for today.
  */
 export const hasReachedGenerationLimit = async () => {
   const count = await getGenerationCount();
@@ -29,9 +41,12 @@ export const hasReachedGenerationLimit = async () => {
  */
 export const incrementGenerationCount = async () => {
   try {
-    const currentCount = await getGenerationCount();
-    const newCount = currentCount + 1;
-    await AsyncStorage.setItem(VISUALISER_USAGE_KEY, newCount.toString());
+    const data = await getDailyData();
+    const newCount = data.count + 1;
+    await AsyncStorage.setItem(
+      VISUALISER_USAGE_KEY,
+      JSON.stringify({ date: getTodayDateString(), count: newCount })
+    );
     return newCount;
   } catch (error) {
     console.error("Failed to increment generation count", error);

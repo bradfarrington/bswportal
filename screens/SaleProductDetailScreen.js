@@ -11,6 +11,7 @@ import {
 import { Ionicons, Feather, FontAwesome } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import { useNavigation } from "@react-navigation/native";
+import CachedImage from "../components/CachedImage";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -81,7 +82,7 @@ const ProductDetails = (props) => {
       >
         {/* Main Image Container */}
         <View style={styles.imageBackground}>
-          <Image 
+          <CachedImage 
             source={{ uri: selectedImage }} 
             style={[styles.mainImage, { aspectRatio: imageAspect }]} 
             resizeMode="cover" 
@@ -104,7 +105,7 @@ const ProductDetails = (props) => {
                 ]}
                 onPress={() => setSelectedImage(img)}
               >
-                <Image source={{ uri: img }} style={styles.thumbnailImage} resizeMode="cover" />
+                <CachedImage source={{ uri: img }} style={styles.thumbnailImage} resizeMode="cover" />
               </TouchableOpacity>
             ))}
           </ScrollView>

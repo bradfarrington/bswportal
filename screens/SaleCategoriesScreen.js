@@ -8,6 +8,7 @@ import {
   Dimensions,
   TextInput,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useState, useLayoutEffect } from "react";
@@ -15,10 +16,11 @@ import { useNavigation } from "@react-navigation/native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../config/supabaseClient";
+import CachedImage from "../components/CachedImage";
 
 const { width } = Dimensions.get("window");
 
-const ProductCard = ({ item, onPress }) => {
+const ProductCard = ({ item, onPress, isTablet }) => {
   const [aspectRatio, setAspectRatio] = useState(1);
 
   useEffect(() => {
@@ -47,17 +49,17 @@ const ProductCard = ({ item, onPress }) => {
       activeOpacity={0.9}
     >
       <View style={[styles.imageContainer, { aspectRatio }]}>
-        <Image
+        <CachedImage
           style={styles.productImage}
           resizeMode="cover"
           source={{ uri: item.url || item.pic_url }}
         />
       </View>
       <View style={styles.productInfo}>
-        <Text style={styles.productTitle} numberOfLines={2}>
+        <Text style={[styles.productTitle, isTablet && { fontSize: 16 }]} numberOfLines={2}>
           {item.name}
         </Text>
-        <Text style={styles.productPrice}>{item.price}</Text>
+        <Text style={[styles.productPrice, isTablet && { fontSize: 20 }]}>{item.price}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -69,6 +71,8 @@ const SalesHomeScreen = () => {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -145,12 +149,14 @@ const SalesHomeScreen = () => {
             style={[
               styles.categoryPill,
               selectedCategory === cat.id && styles.categoryPillActive,
+              isTablet && { paddingVertical: 12, paddingHorizontal: 22 }
             ]}
             onPress={() => setSelectedCategory(cat.id)}
           >
             <Text
               style={[
                 styles.categoryText,
+                isTablet && { fontSize: 16 },
                 selectedCategory === cat.id && styles.categoryTextActive,
               ]}
             >
@@ -162,8 +168,8 @@ const SalesHomeScreen = () => {
 
       <View style={styles.promoBanner}>
         <View style={styles.promoContent}>
-          <Text style={styles.promoTitle}>Ex-Display Sale</Text>
-          <Text style={styles.promoSubtitle}>Up To 50% Off</Text>
+          <Text style={[styles.promoTitle, isTablet && { fontSize: 24 }]}>Ex-Display Sale</Text>
+          <Text style={[styles.promoSubtitle, isTablet && { fontSize: 16 }]}>Up To 50% Off</Text>
           <View style={styles.promoBtnWrapper}>
             <View style={styles.promoBtnGlow} />
             <LinearGradient
@@ -172,8 +178,8 @@ const SalesHomeScreen = () => {
               end={{ x: 1, y: 1 }}
               style={styles.promoBtn}
             >
-              <Text style={styles.promoBtnText}>Shop Now</Text>
-              <Feather name="arrow-right" size={14} color="#fff" style={{marginLeft: 6}} />
+              <Text style={[styles.promoBtnText, isTablet && { fontSize: 14 }]}>Shop Now</Text>
+              <Feather name="arrow-right" size={isTablet ? 18 : 14} color="#fff" style={{marginLeft: 6}} />
             </LinearGradient>
           </View>
         </View>
@@ -185,12 +191,9 @@ const SalesHomeScreen = () => {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, isTablet && { fontSize: 24 }]}>
           {selectedCategory === "All" ? "All Products" : selectedCategory}
         </Text>
-        <TouchableOpacity>
-          <Text style={styles.seeAllText}>see all</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -213,6 +216,7 @@ const SalesHomeScreen = () => {
                 <ProductCard
                   key={item.id}
                   item={item}
+                  isTablet={isTablet}
                   onPress={() => {
                     navigation.navigate("SaleProductDetail", {
                       id: item.id,
@@ -238,6 +242,7 @@ const SalesHomeScreen = () => {
                 <ProductCard
                   key={item.id}
                   item={item}
+                  isTablet={isTablet}
                   onPress={() => {
                     navigation.navigate("SaleProductDetail", {
                       id: item.id,

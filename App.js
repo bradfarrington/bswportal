@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import AppNavigator from "./navigation/AppNavigator";
 import { useFonts } from "expo-font";
@@ -9,6 +9,8 @@ import * as Notifications from "expo-notifications";
 import { registerForPushNotificationsAsync } from "./components/pushNotifications";
 import { StatusBar } from "expo-status-bar"; 
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { loadCategories } from "./data/ProductsData";
+import { loadAllDesignerData } from "./data/DoorDesignerData";
 
 // Keep the splash screen visible while we load fonts/resources
 SplashScreen.preventAutoHideAsync();
@@ -34,6 +36,18 @@ export default function App() {
     InterBold: Inter_700Bold,
     InterExtraBold: Inter_800ExtraBold,
   });
+
+  // Prefetch critical data during splash screen (parallel with fonts)
+  const [dataReady, setDataReady] = useState(false);
+  useEffect(() => {
+    Promise.all([
+      loadCategories().catch(err => console.log('[Prefetch] Categories failed:', err)),
+      loadAllDesignerData().catch(err => console.log('[Prefetch] Designer data failed:', err)),
+    ]).then(() => {
+      console.log('[Prefetch] All data ready');
+      setDataReady(true);
+    }).catch(() => setDataReady(true)); // Never block app on failure
+  }, []);
   const notificationListener = useRef();
   const responseListener = useRef();
 
@@ -61,14 +75,14 @@ export default function App() {
       .catch((error) => console.log(error));
   }, []);
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded) {
+    if (fontsLoaded && dataReady) {
       await SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, dataReady]);
   useEffect(() => {
     onLayoutRootView();
-  }, [fontsLoaded]);
-  if (!fontsLoaded) {
+  }, [fontsLoaded, dataReady]);
+  if (!fontsLoaded || !dataReady) {
     return null;
   }
   return (
