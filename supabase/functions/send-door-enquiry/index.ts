@@ -16,6 +16,7 @@ interface EnquiryPayload {
   outsideImageUrl?: string;
   insideImageUrl?: string;
   viewOnHomeImageUrl?: string;
+  originalImageUrl?: string;
   doorSpec: {
     doorStyle?: string;
     externalColour?: string;
@@ -44,22 +45,33 @@ function buildEmailHtml(data: EnquiryPayload): string {
   const hasOutside = !!data.outsideImageUrl;
   const hasInside = !!data.insideImageUrl;
   const hasViewOnHome = !!data.viewOnHomeImageUrl;
-  const hasAnyImage = hasOutside || hasInside || hasViewOnHome;
+  const hasOriginal = !!data.originalImageUrl;
+  const hasAnyImage = hasOutside || hasInside || hasViewOnHome || hasOriginal;
 
   // Build door images section
   let doorImagesHtml = "";
   if (hasAnyImage) {
-    const imageCount = (hasOutside ? 1 : 0) + (hasInside ? 1 : 0) + (hasViewOnHome ? 1 : 0);
-    const imageWidth = imageCount >= 2 ? "32%" : "60%";
+    const imageCount = (hasOutside ? 1 : 0) + (hasInside ? 1 : 0) + (hasViewOnHome ? 1 : 0) + (hasOriginal ? 1 : 0);
+    const imageWidth = imageCount >= 2 ? (imageCount === 2 ? "48%" : "32%") : "60%";
     
     doorImagesHtml = `
           <tr>
             <td style="padding: 0 32px 24px 32px;">
               <h2 style="color:#111; font-size:16px; margin:0 0 16px 0; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px;">
-                Door Preview
+                Visualisation Preview
               </h2>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
+                  ${hasOriginal ? `
+                  <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
+                    <img src="${data.originalImageUrl}" alt="Original Photo" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
+                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Original Photo</p>
+                  </td>` : ""}
+                  ${hasViewOnHome ? `
+                  <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
+                    <img src="${data.viewOnHomeImageUrl}" alt="Visualisation" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
+                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Visualisation</p>
+                  </td>` : ""}
                   ${hasOutside ? `
                   <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
                     <img src="${data.outsideImageUrl}" alt="Outside View" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
@@ -69,11 +81,6 @@ function buildEmailHtml(data: EnquiryPayload): string {
                   <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
                     <img src="${data.insideImageUrl}" alt="Inside View" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
                     <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">Inside</p>
-                  </td>` : ""}
-                  ${hasViewOnHome ? `
-                  <td align="center" style="width:${imageWidth}; padding: 4px; vertical-align:top;">
-                    <img src="${data.viewOnHomeImageUrl}" alt="View on Home" style="max-width:100%; height:auto; border-radius:8px; border:1px solid #f0f0f0;" />
-                    <p style="color:#6b7280; font-size:12px; margin:8px 0 0 0; text-align:center; font-weight:600;">On Home</p>
                   </td>` : ""}
                 </tr>
               </table>
@@ -97,10 +104,10 @@ function buildEmailHtml(data: EnquiryPayload): string {
           <tr>
             <td style="background-color:#e5040a; padding: 24px 32px;">
               <h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:700;">
-                🚪 New Door Enquiry
+                🏠 New Enquiry
               </h1>
               <p style="color:rgba(255,255,255,0.85); margin:6px 0 0 0; font-size:14px;">
-                Received from the BSW Portal Door Designer
+                Received from the BSW Portal Visualiser
               </p>
             </td>
           </tr>
@@ -137,12 +144,12 @@ function buildEmailHtml(data: EnquiryPayload): string {
             </td>
           </tr>
 
-          <!-- Door Specification -->
+          <!-- Product Specification -->
           ${specRows.length > 0 ? `
           <tr>
             <td style="padding: 0 32px 20px 32px;">
               <h2 style="color:#111; font-size:16px; margin:0 0 16px 0; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px;">
-                Door Specification
+                Product Specification
               </h2>
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa; border-radius:8px; overflow:hidden;">
                 ${specRows.map((row, i) => `
@@ -171,7 +178,7 @@ function buildEmailHtml(data: EnquiryPayload): string {
           <tr>
             <td style="padding: 20px 32px 28px 32px; border-top: 1px solid #f3f4f6;">
               <p style="color:#9ca3af; font-size:12px; margin:0; text-align:center;">
-                Sent from the BSW Portal Door Designer App
+                Sent from the BSW Portal Visualiser App
               </p>
             </td>
           </tr>
@@ -230,7 +237,7 @@ Deno.serve(async (req) => {
 
     // Build email content
     const htmlBody = buildEmailHtml(payload);
-    const subject = `Door Enquiry from ${payload.name}${payload.postcode ? ` — ${payload.postcode}` : ""}`;
+    const subject = `Visualiser Enquiry from ${payload.name}${payload.postcode ? ` — ${payload.postcode}` : ""}`;
 
     // Connect and send via SMTP
     const client = new SMTPClient({
@@ -250,7 +257,7 @@ Deno.serve(async (req) => {
       to: smtpTo!,
       replyTo: payload.email,
       subject: subject,
-      content: `Door enquiry from ${payload.name} (${payload.email})`,
+      content: `Visualiser enquiry from ${payload.name} (${payload.email})`,
       html: htmlBody,
     });
 

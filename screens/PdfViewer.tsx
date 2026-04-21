@@ -20,6 +20,7 @@ const PdfViewerScreen = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [pdfLayout, setPdfLayout] = useState<{ width: number; height: number } | null>(null);
+  const [scale, setScale] = useState(1);
 
   const source = {
     uri: url,
@@ -44,6 +45,14 @@ const PdfViewerScreen = () => {
     setPdfLayout({ width, height });
   };
 
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.5, 3.0));
+  };
+
+  const handleZoomOut = () => {
+    setScale((prev) => Math.max(prev - 0.5, 1.0));
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <SafeAreaView style={styles.container}>
@@ -54,7 +63,24 @@ const PdfViewerScreen = () => {
            <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
                <AntDesign name="close" size={20} color="#fff" />
            </TouchableOpacity>
-           <View style={{ flex: 1 }} />
+           
+           <View style={styles.zoomControls}>
+               <TouchableOpacity 
+                   style={[styles.zoomBtn, scale <= 1 && { opacity: 0.3 }]} 
+                   onPress={handleZoomOut}
+                   disabled={scale <= 1}
+               >
+                   <Feather name="zoom-out" size={20} color="#fff" />
+               </TouchableOpacity>
+               <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
+               <TouchableOpacity 
+                   style={[styles.zoomBtn, scale >= 3 && { opacity: 0.3 }]} 
+                   onPress={handleZoomIn}
+                   disabled={scale >= 3}
+               >
+                   <Feather name="zoom-in" size={20} color="#fff" />
+               </TouchableOpacity>
+           </View>
         </View>
 
         <View style={styles.pdfWrapper} onLayout={handlePdfWrapperLayout}>
@@ -65,9 +91,12 @@ const PdfViewerScreen = () => {
               source={source}
               trustAllCerts={false}
               horizontal={true}
-              enablePaging={true}
+              enablePaging={scale === 1}
               fitPolicy={2}
-              singlePage={true}
+              scale={scale}
+              minScale={1.0}
+              maxScale={3.0}
+              onScaleChanged={(newScale) => setScale(newScale)}
               style={{
                 width: pdfLayout.width,
                 height: pdfLayout.height,
@@ -143,6 +172,28 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  zoomControls: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  zoomBtn: {
+    width: 35,
+    height: 35,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 8,
+  },
+  zoomText: {
+    fontFamily: "RB",
+    fontSize: 14,
+    color: "#fff",
+    minWidth: 45,
+    textAlign: "center",
   },
   pdfWrapper: {
     flex: 1,

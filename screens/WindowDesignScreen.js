@@ -429,6 +429,7 @@ export default function WindowDesignScreen({ navigation, route }) {
       });
       setIsSaving(false);
 
+      const originalImageUrl = await uploadImage(imageUri, 'original-photo');
       const viewOnHomeImageUrl = await uploadImage(localUri, 'view-on-home');
 
       const doorItem = addedItems.find(item => item.type === 'door' && item.doorSpec);
@@ -460,6 +461,7 @@ export default function WindowDesignScreen({ navigation, route }) {
           outsideImageUrl: null,
           insideImageUrl: null,
           viewOnHomeImageUrl: viewOnHomeImageUrl,
+          originalImageUrl: originalImageUrl,
           doorSpec: doorSpec || {}
         }),
       });
