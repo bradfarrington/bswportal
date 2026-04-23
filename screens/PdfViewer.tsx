@@ -1,8 +1,10 @@
 import React, { useRef, useState } from "react";
-import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, SafeAreaView, StatusBar, useWindowDimensions } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, StatusBar, useWindowDimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Pdf from "react-native-pdf";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { AntDesign, Feather } from "@expo/vector-icons";
+import CustomHeader from "../components/CustomHeader";
 
 type RootStackParamList = {
   PdfViewer: { url: string };
@@ -55,33 +57,34 @@ const PdfViewerScreen = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="light-content" />
         
-        {/* Custom Header Overlay */}
-        <View style={styles.header}>
-           <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-               <AntDesign name="close" size={20} color="#fff" />
-           </TouchableOpacity>
-           
-           <View style={styles.zoomControls}>
-               <TouchableOpacity 
-                   style={[styles.zoomBtn, scale <= 1 && { opacity: 0.3 }]} 
-                   onPress={handleZoomOut}
-                   disabled={scale <= 1}
-               >
-                   <Feather name="zoom-out" size={20} color="#fff" />
-               </TouchableOpacity>
-               <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
-               <TouchableOpacity 
-                   style={[styles.zoomBtn, scale >= 3 && { opacity: 0.3 }]} 
-                   onPress={handleZoomIn}
-                   disabled={scale >= 3}
-               >
-                   <Feather name="zoom-in" size={20} color="#fff" />
-               </TouchableOpacity>
-           </View>
-        </View>
+        <CustomHeader 
+          title="Brochure Viewer"
+          backgroundColor="#000"
+          textColor="#fff"
+          iconColor="#fff"
+          rightComponent={
+            <View style={styles.zoomControls}>
+                <TouchableOpacity 
+                    style={[styles.zoomBtn, scale <= 1 && { opacity: 0.3 }]} 
+                    onPress={handleZoomOut}
+                    disabled={scale <= 1}
+                >
+                    <Feather name="zoom-out" size={20} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
+                <TouchableOpacity 
+                    style={[styles.zoomBtn, scale >= 3 && { opacity: 0.3 }]} 
+                    onPress={handleZoomIn}
+                    disabled={scale >= 3}
+                >
+                    <Feather name="zoom-in" size={20} color="#fff" />
+                </TouchableOpacity>
+            </View>
+          }
+        />
 
         <View style={styles.pdfWrapper} onLayout={handlePdfWrapperLayout}>
           {pdfLayout && (
@@ -157,26 +160,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000", 
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: "#000",
-    zIndex: 10,
-  },
-  closeButton: {
-    width: 35,
-    height: 35,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
   zoomControls: {
-    flex: 1,
     flexDirection: "row",
-    justifyContent: "flex-end",
     alignItems: "center",
   },
   zoomBtn: {

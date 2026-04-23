@@ -11,6 +11,8 @@ import { BlurView } from "expo-blur";
 import * as FileSystem from "expo-file-system";
 import { decode } from "base64-arraybuffer";
 import { supabase } from '../config/supabaseClient';
+import { SafeAreaView } from "react-native-safe-area-context";
+import CustomHeader from "../components/CustomHeader";
 
 const ALL_COLORS = [
   "White", "White Grain", "Ice Cream", "Ice Cream Grained", "Ice Cream on White", "Cherrywood", "Cherrywood on White",
@@ -432,7 +434,9 @@ export default function VisualiserScreen({ navigation }) {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <CustomHeader title="AI Visualiser" />
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.content}>
         <Text style={styles.title}>AI Visualiser</Text>
         <Text style={styles.subtitle}>See what new windows and doors will look like on your house.</Text>
 
@@ -649,12 +653,17 @@ export default function VisualiserScreen({ navigation }) {
         </View>
       </Modal>
       {renderEnquiryModal()}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+  },
+  scrollContainer: {
     flex: 1,
     backgroundColor: "#F9FAFB",
   },

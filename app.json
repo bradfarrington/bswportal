@@ -2,7 +2,7 @@
   "expo": {
     "name": "BSW Portal",
     "slug": "BSWCustomerPortal",
-    "version": "2.0.0",
+    "version": "2.0.1y",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bradbtfx.BSWCustomerPortal",
-      "buildNumber": "13",
+      "buildNumber": "14",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryAddUsageDescription": "BSW Portal needs access to save your visualiser images to your photo library.",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.BSWCustomerPortal.bradtech",
-      "versionCode": 13,
+      "versionCode": 14,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

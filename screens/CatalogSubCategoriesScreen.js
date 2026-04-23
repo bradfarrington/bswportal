@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ImageBackground, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CachedImage from '../components/CachedImage';
+import CustomHeader from '../components/CustomHeader';
 
 export default function CatalogSubCategoriesScreen({ route, navigation }) {
   const { category } = route.params;
@@ -96,7 +98,8 @@ export default function CatalogSubCategoriesScreen({ route, navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <CustomHeader title={category?.title || "Products"} />
       <FlatList 
         key={`${numColumns}-${isLandscape}`} // Force re-render when layout changes
         data={category.subcategories}
@@ -107,7 +110,7 @@ export default function CatalogSubCategoriesScreen({ route, navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

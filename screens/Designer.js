@@ -12,6 +12,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import CustomHeader from '../components/CustomHeader';
 import { supabase } from '../config/supabaseClient';
 import {
   getStoredImageUrl, findHeading, getSelectedDescription,
@@ -1759,7 +1761,8 @@ const Designer = ({ navigation, route }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <CustomHeader title="Door Designer" />
       {/* Hidden WebView: loads the ASPX page to establish session, then handles all API calls */}
       <View style={{ width: 0, height: 0, overflow: 'hidden', position: 'absolute' }}>
         <WebView
@@ -1801,7 +1804,7 @@ const Designer = ({ navigation, route }) => {
       {/* Enquiry Modal */}
       {renderEnquiryModal()}
 
-    </View>
+    </SafeAreaView>
   );
 };
 

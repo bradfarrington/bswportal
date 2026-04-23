@@ -11,12 +11,13 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useEffect, useState, useLayoutEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../config/supabaseClient";
 import CachedImage from "../components/CachedImage";
+import CustomHeader from "../components/CustomHeader";
 
 const { width } = Dimensions.get("window");
 
@@ -74,21 +75,7 @@ const SalesHomeScreen = () => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: "Sales & Clearance",
-      headerBackTitle: " ",
-      headerTintColor: "#111",
-      headerStyle: {
-        backgroundColor: "#F9FAFB",
-      },
-      headerShadowVisible: false,
-      headerTitleStyle: {
-        fontFamily: "RB",
-        fontSize: 18,
-      },
-    });
-  }, [navigation]);
+
 
   const getData = async () => {
     try {
@@ -200,6 +187,7 @@ const SalesHomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      <CustomHeader title="Sales & Clearance" showBackBtn={false} />
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E5040A" />

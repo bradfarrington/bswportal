@@ -46,3 +46,8 @@ yarn-error.*
 
 # Gemini/AI
 .gemini/
+
+# Native folders (EAS should auto-generate these)
+ios/
+android/
+

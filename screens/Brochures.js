@@ -67,9 +67,7 @@ const Brochures = () => {
   const activeCategories = useMemo(() => {
     const active = new Set(["All"]);
     BrochureData.forEach(item => {
-      if (item.isMaintenance) {
-        active.add("Maintenance");
-      } else if (item.category) {
+      if (item.category) {
         active.add(item.category);
       }
     });
@@ -114,7 +112,7 @@ const Brochures = () => {
 
   const getData = async () => {
     try {
-      const lastQueryTime = await AsyncStorage.getItem("lastQueryTimeLibrary_v3");
+      const lastQueryTime = await AsyncStorage.getItem("lastQueryTimeLibrary_v5");
       const currentTime = Date.now();
       setLoading(true);
 
@@ -122,27 +120,21 @@ const Brochures = () => {
         !lastQueryTime ||
         currentTime - parseInt(lastQueryTime) >= 24 * 60 * 60 * 1000
       ) {
-        const [brochuresResponse, maintenanceResponse] = await Promise.all([
-          supabase.from("brochures").select("*"),
-          supabase.from("maintenance_guides").select("*")
-        ]);
+        const brochuresResponse = await supabase.from("brochures").select("*");
 
         if (brochuresResponse.error) throw brochuresResponse.error;
-        if (maintenanceResponse.error) throw maintenanceResponse.error;
 
-        const brochures = (brochuresResponse.data || []).map(item => ({...item, isMaintenance: false}));
-        const maintenance = (maintenanceResponse.data || []).map(item => ({...item, isMaintenance: true}));
+        const brochures = brochuresResponse.data || [];
         
-        const combined = [...brochures, ...maintenance];
-        setBrochureData(combined);
+        setBrochureData(brochures);
 
-        await AsyncStorage.setItem("lastQueryTimeLibrary_v3", currentTime.toString());
-        await AsyncStorage.setItem("cachedLibraryData_v3", JSON.stringify(combined));
+        await AsyncStorage.setItem("lastQueryTimeLibrary_v5", currentTime.toString());
+        await AsyncStorage.setItem("cachedLibraryData_v5", JSON.stringify(brochures));
         console.log("from supabase");
       } else {
         console.log("cached data");
         const cachedData = JSON.parse(
-          await AsyncStorage.getItem("cachedLibraryData_v3")
+          await AsyncStorage.getItem("cachedLibraryData_v5")
         );
         setBrochureData(cachedData || []);
       }
@@ -176,10 +168,9 @@ const Brochures = () => {
   }
 
   const filteredData = BrochureData.filter(item => {
-    if (!item.isMaintenance && !item.category) return false;
+    if (!item.category) return false;
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (selectedCategory === "All") return true;
-    if (selectedCategory === "Maintenance") return item.isMaintenance;
     return item.category === selectedCategory; 
   });
 

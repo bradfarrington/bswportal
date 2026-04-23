@@ -21,7 +21,6 @@ import SaleProductsScreen from "../screens/SaleProductsScreen";
 import SaleProductDetailScreen from "../screens/SaleProductDetailScreen";
 import { Entypo } from "@expo/vector-icons";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
-import MaintenanceGuides from "../screens/maintenanceGuides";
 import CatalogCategoriesScreen from "../screens/CatalogCategoriesScreen";
 import CatalogSubCategoriesScreen from "../screens/CatalogSubCategoriesScreen";
 import CatalogProductDetailsScreen from "../screens/CatalogProductDetailsScreen";
@@ -194,11 +193,7 @@ const AppNavigator = () => {
         name="Designer"
         component={Designer}
         options={{
-          headerShown: true,
-          title: "Door Designer",
-          headerTitleStyle: { fontFamily: "RB", fontSize: 17 },
-          headerStyle: { backgroundColor: '#F9FAFB' },
-          headerShadowVisible: false,
+          headerShown: false,
           contentStyle: { paddingTop: 0, marginTop: 0 },
         }}
       />
@@ -235,57 +230,22 @@ const AppNavigator = () => {
       <Stack.Screen
         name="GalleryAlbum"
         component={GalleryAlbumScreen}
-        options={({ route }) => ({
-          title: route.params?.title || 'Album',
-          headerBackTitle: ' ',
-          headerTintColor: '#111',
-          headerTitleStyle: {
-            fontFamily: 'RB',
-            fontSize: 17,
-          },
-          headerStyle: {
-            backgroundColor: '#F9FAFB',
-          },
-          headerShadowVisible: false,
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="SaleProductDetail"
         component={SaleProductDetailScreen}
-        options={{
-          headerTitleStyle: {
-            fontFamily: "RB",
-          },
-          headerStyle: {
-            backgroundColor: "#F9FAFB",
-          },
-          headerShadowVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CatalogCategories"
         component={CatalogCategoriesScreen}
-        options={{
-          title: "Our Products",
-          headerTitleStyle: { fontFamily: "RB" },
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CatalogSubCategories"
         component={CatalogSubCategoriesScreen}
-        options={({ route }) => ({
-          title: route.params?.category?.title || "Products",
-          headerBackTitle: " ",
-          headerTintColor: "#111",
-          headerTitleStyle: {
-            fontFamily: "RB",
-            fontSize: 17,
-          },
-          headerStyle: {
-            backgroundColor: "#F9F9FB",
-          },
-          headerShadowVisible: false,
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="CatalogProductDetails"
@@ -295,14 +255,7 @@ const AppNavigator = () => {
       <Stack.Screen
         name="VisualiserScreen"
         component={VisualiserScreen}
-        options={{
-          title: "AI Visualiser",
-          headerTitleStyle: { fontFamily: "RB" },
-          headerStyle: {
-            backgroundColor: "#F9FAFB",
-          },
-          headerShadowVisible: false,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="VisualiserResult"

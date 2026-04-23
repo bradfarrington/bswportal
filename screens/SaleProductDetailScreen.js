@@ -11,7 +11,9 @@ import {
 import { Ionicons, Feather, FontAwesome } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import CachedImage from "../components/CachedImage";
+import CustomHeader from "../components/CustomHeader";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -58,24 +60,15 @@ const ProductDetails = (props) => {
     }
   }, [selectedImage]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: "",
-      headerBackTitle: " ",
-      headerTintColor: "#111",
-      headerStyle: {
-        backgroundColor: "#F9FAFB",
-      },
-      headerShadowVisible: false,
-    });
-  }, [navigation]);
+
 
   const callNumber = () => {
     Linking.openURL(`tel:01827288688`);
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <CustomHeader title="Product Details" />
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
@@ -178,7 +171,7 @@ const ProductDetails = (props) => {
            <Text style={styles.solidButtonText}>Collect Today</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

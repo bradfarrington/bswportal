@@ -14,8 +14,10 @@ import {
 import axios from 'axios';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
 import ImageViewer from 'react-native-image-zoom-viewer';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FLICKR_API_KEY, FLICKR_USER_ID, FLICKR_BASE_URL, buildPhotoUrl } from '../config/flickrConfig';
 import CachedImage from '../components/CachedImage';
+import CustomHeader from '../components/CustomHeader';
 
 const { width } = Dimensions.get('window');
 const PADDING = 12;
@@ -155,13 +157,22 @@ const GalleryAlbumScreen = ({ route }) => {
     return photo.url_z || photo.url_c || photo.url_m || buildPhotoUrl(photo, 'z');
   };
 
-  const getFullUrl = (photo) => {
-    return photo.url_l || photo.url_c || photo.url_z || photo.url_o || buildPhotoUrl(photo, 'b');
+  const getFullImageInfo = (photo) => {
+    if (photo.url_l) return { url: photo.url_l, width: photo.width_l, height: photo.height_l };
+    if (photo.url_c) return { url: photo.url_c, width: photo.width_c, height: photo.height_c };
+    if (photo.url_z) return { url: photo.url_z, width: photo.width_z, height: photo.height_z };
+    if (photo.url_o) return { url: photo.url_o, width: photo.width_o, height: photo.height_o };
+    return { url: buildPhotoUrl(photo, 'b') };
   };
 
-  const viewerImages = photos.map((photo) => ({
-    url: getFullUrl(photo),
-  }));
+  const viewerImages = photos.map((photo) => {
+    const info = getFullImageInfo(photo);
+    return {
+      url: info.url,
+      width: info.width ? parseInt(info.width, 10) : undefined,
+      height: info.height ? parseInt(info.height, 10) : undefined,
+    };
+  });
 
   const handleImagePress = (index) => {
     setSelectedIndex(index);
@@ -247,7 +258,8 @@ const GalleryAlbumScreen = ({ route }) => {
   const bentoRows = buildBentoRows(photos);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <CustomHeader title={title || "Album"} />
       {/* Stats bar */}
       <View style={styles.statsBar}>
         <View style={styles.statItem}>
@@ -281,6 +293,14 @@ const GalleryAlbumScreen = ({ route }) => {
           onSwipeDown={() => setModalVisible(false)}
           saveToLocalByLongPress={false}
           backgroundColor="rgba(0,0,0,0.95)"
+          loadingRender={() => <ActivityIndicator size="large" color="#e5040a" />}
+          renderImage={(props) => (
+            <CachedImage
+              source={props.source}
+              style={props.style}
+              resizeMode="contain"
+            />
+          )}
           renderIndicator={(currentIndex, allSize) => (
             <View style={styles.indicator}>
               <Text style={styles.indicatorText}>
@@ -298,7 +318,7 @@ const GalleryAlbumScreen = ({ route }) => {
           )}
         />
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

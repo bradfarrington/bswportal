@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadCategories } from '../data/ProductsData';
 import { MaterialIcons } from '@expo/vector-icons';
 import CachedImage from '../components/CachedImage';
+import CustomHeader from '../components/CustomHeader';
 
 export default function CatalogCategoriesScreen({ navigation }) {
   const [categories, setCategories] = useState([]);
@@ -86,9 +87,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Our Products</Text>
-        </View>
+        <CustomHeader title="Our Products" showBackBtn={false} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E5040A" />
         </View>
@@ -98,9 +97,7 @@ export default function CatalogCategoriesScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Our Products</Text>
-      </View>
+      <CustomHeader title="Our Products" showBackBtn={false} />
       <ScrollView 
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -177,16 +174,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9F9FB',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: 'RB',
-    color: '#111',
   },
   listContent: {
     paddingHorizontal: 20,
