@@ -2076,7 +2076,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   optionImageContainer: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',

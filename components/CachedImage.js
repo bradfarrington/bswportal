@@ -72,7 +72,7 @@ const CachedImage = ({
   const flatStyle = StyleSheet.flatten(style) || {};
 
   return (
-    <View style={[{ overflow: 'hidden', backgroundColor: placeholderColor }, flatStyle]}>
+    <View style={[{ overflow: 'hidden', backgroundColor: 'transparent' }, flatStyle]}>
       {/* Shimmer placeholder */}
       {!loaded && (
         <View
