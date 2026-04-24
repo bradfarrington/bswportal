@@ -3,8 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, StatusBar,
 import { SafeAreaView } from "react-native-safe-area-context";
 import Pdf from "react-native-pdf";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
-import { AntDesign, Feather } from "@expo/vector-icons";
-import CustomHeader from "../components/CustomHeader";
+import { Feather, Ionicons } from "@expo/vector-icons";
 
 type RootStackParamList = {
   PdfViewer: { url: string };
@@ -60,31 +59,30 @@ const PdfViewerScreen = () => {
       <SafeAreaView style={styles.container} edges={['top']}>
         <StatusBar barStyle="light-content" />
         
-        <CustomHeader 
-          title="Brochure Viewer"
-          backgroundColor="#000"
-          textColor="#fff"
-          iconColor="#fff"
-          rightComponent={
-            <View style={styles.zoomControls}>
-                <TouchableOpacity 
-                    style={[styles.zoomBtn, scale <= 1 && { opacity: 0.3 }]} 
-                    onPress={handleZoomOut}
-                    disabled={scale <= 1}
-                >
-                    <Feather name="zoom-out" size={20} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
-                <TouchableOpacity 
-                    style={[styles.zoomBtn, scale >= 3 && { opacity: 0.3 }]} 
-                    onPress={handleZoomIn}
-                    disabled={scale >= 3}
-                >
-                    <Feather name="zoom-in" size={20} color="#fff" />
-                </TouchableOpacity>
-            </View>
-          }
-        />
+        {/* Minimal header: back button + zoom controls, no title */}
+        <View style={styles.headerBar}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={28} color="#fff" />
+          </TouchableOpacity>
+
+          <View style={styles.zoomControls}>
+            <TouchableOpacity 
+              style={[styles.zoomBtn, scale <= 1 && { opacity: 0.3 }]} 
+              onPress={handleZoomOut}
+              disabled={scale <= 1}
+            >
+              <Feather name="zoom-out" size={20} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.zoomText}>{Math.round(scale * 100)}%</Text>
+            <TouchableOpacity 
+              style={[styles.zoomBtn, scale >= 3 && { opacity: 0.3 }]} 
+              onPress={handleZoomIn}
+              disabled={scale >= 3}
+            >
+              <Feather name="zoom-in" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.pdfWrapper} onLayout={handlePdfWrapperLayout}>
           {pdfLayout && (
@@ -92,7 +90,7 @@ const PdfViewerScreen = () => {
               key={`${pdfLayout.width}-${pdfLayout.height}`}
               ref={pdfRef}
               source={source}
-              trustAllCerts={false}
+              trustAllCerts={true}
               horizontal={true}
               enablePaging={scale === 1}
               fitPolicy={2}
@@ -119,8 +117,7 @@ const PdfViewerScreen = () => {
                 setTotalPages(pages);
               }}
               onError={(error) => {
-                console.error(error);
-                alert("Something went wrong loading the PDF.");
+                console.log("PDF load error:", error);
               }}
             />
           )}
@@ -160,18 +157,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000", 
   },
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    backgroundColor: "#000",
+  },
+  backBtn: {
+    padding: 5,
+  },
   zoomControls: {
     flexDirection: "row",
     alignItems: "center",
   },
   zoomBtn: {
-    width: 35,
-    height: 35,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: "rgba(255,255,255,0.15)",
     justifyContent: "center",
     alignItems: "center",
-    marginHorizontal: 8,
+    marginHorizontal: 6,
   },
   zoomText: {
     fontFamily: "RB",
