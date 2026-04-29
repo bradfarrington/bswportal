@@ -14,6 +14,7 @@ import { SvgXml } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
+import CachedImage from '../components/CachedImage';
 import { supabase } from '../config/supabaseClient';
 import {
   getStoredImageUrl, findHeading, getSelectedDescription,
@@ -1112,7 +1113,7 @@ const Designer = ({ navigation, route }) => {
         disabled={selecting}
       >
         <View style={[styles.optionImageContainer, { height: tileH - 40 }]}>
-          <Image
+          <CachedImage
             source={{ uri: imageUrl }}
             style={styles.optionImage}
             resizeMode="contain"
@@ -1235,7 +1236,7 @@ const Designer = ({ navigation, route }) => {
                 return (
                   <View style={{ width: finalW, height: finalH, alignSelf: 'center' }}>
                     {imageMatches.map((m, i) => (
-                      <Image
+                      <CachedImage
                         key={i}
                         source={{ uri: m[5].replace(/&amp;/g, '&') }}
                         style={{
@@ -1311,7 +1312,7 @@ const Designer = ({ navigation, route }) => {
                     ) : svgData ? (
                       svgData.includes('<image') ? renderNativeSvgImageStack(svgData) || <SvgXml xml={svgData} width="100%" height="100%" /> : <SvgXml xml={svgData} width="100%" height="100%" />
                     ) : imageUrl ? (
-                      <Image
+                      <CachedImage
                         source={{ uri: imageUrl }}
                         style={styles.styleCardImage}
                         resizeMode="contain"

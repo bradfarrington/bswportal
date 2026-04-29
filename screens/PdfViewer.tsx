@@ -1,7 +1,8 @@
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View, Text, TouchableOpacity, ActivityIndicator, StatusBar, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Pdf from "react-native-pdf";
+import * as FileSystem from "expo-file-system";
 import { RouteProp, useRoute, useNavigation } from "@react-navigation/native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 
@@ -11,23 +12,80 @@ type RootStackParamList = {
 
 type PdfViewerRouteProp = RouteProp<RootStackParamList, "PdfViewer">;
 
+const hashUrl = (s: string) => {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = (((h << 5) + h) ^ s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(16);
+};
+
 const PdfViewerScreen = () => {
   const route = useRoute<PdfViewerRouteProp>();
   const navigation = useNavigation();
   const { url } = route.params;
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
-  
+
   const pdfRef = useRef<Pdf>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [pdfLayout, setPdfLayout] = useState<{ width: number; height: number } | null>(null);
   const [scale, setScale] = useState(1);
+  const [localUri, setLocalUri] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
+  const hasRetriedCorruptCache = useRef(false);
 
-  const source = {
-    uri: url,
-    cache: true,
-    trusty: true,
+  const localPath = `${FileSystem.cacheDirectory}bsw_pdf_${hashUrl(url)}.pdf`;
+
+  useEffect(() => {
+    let cancelled = false;
+    const ensureLocal = async () => {
+      setDownloadError(null);
+      setLocalUri(null);
+      try {
+        const info = await FileSystem.getInfoAsync(localPath);
+        if (info.exists && (info as any).size > 0) {
+          if (!cancelled) setLocalUri(info.uri);
+          return;
+        }
+        const result = await FileSystem.downloadAsync(url, localPath);
+        if (result.status !== 200) {
+          await FileSystem.deleteAsync(localPath, { idempotent: true });
+          throw new Error(`Server returned ${result.status}`);
+        }
+        if (!cancelled) setLocalUri(result.uri);
+      } catch (e: any) {
+        console.log("PDF download error:", e);
+        if (!cancelled) setDownloadError(e?.message || "Couldn't download brochure");
+      }
+    };
+    ensureLocal();
+    return () => {
+      cancelled = true;
+    };
+  }, [url, retryToken]);
+
+  const handlePdfError = useCallback(
+    async (error: any) => {
+      console.log("PDF load error:", error);
+      if (hasRetriedCorruptCache.current) {
+        setDownloadError("This brochure couldn't be opened.");
+        return;
+      }
+      hasRetriedCorruptCache.current = true;
+      try {
+        await FileSystem.deleteAsync(localPath, { idempotent: true });
+      } catch {}
+      setRetryToken((t) => t + 1);
+    },
+    [localPath]
+  );
+
+  const handleManualRetry = () => {
+    hasRetriedCorruptCache.current = false;
+    setRetryToken((t) => t + 1);
   };
+
+  const source = localUri ? { uri: localUri } : null;
 
   const handleNextPage = () => {
     if (currentPage < totalPages && pdfRef.current) {
@@ -85,9 +143,21 @@ const PdfViewerScreen = () => {
         </View>
 
         <View style={styles.pdfWrapper} onLayout={handlePdfWrapperLayout}>
-          {pdfLayout && (
+          {downloadError ? (
+            <View style={styles.loadingWrapper}>
+              <Text style={styles.errorText}>{downloadError}</Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={handleManualRetry}>
+                <Text style={styles.retryBtnText}>Try again</Text>
+              </TouchableOpacity>
+            </View>
+          ) : !source ? (
+            <View style={styles.loadingWrapper}>
+              <ActivityIndicator size="large" color="#E5040A" />
+              <Text style={styles.loadingText}>Opening Booklet...</Text>
+            </View>
+          ) : pdfLayout && (
             <Pdf
-              key={`${pdfLayout.width}-${pdfLayout.height}`}
+              key={`${pdfLayout.width}-${pdfLayout.height}-${retryToken}`}
               ref={pdfRef}
               source={source}
               trustAllCerts={true}
@@ -116,9 +186,7 @@ const PdfViewerScreen = () => {
               onLoadComplete={(pages) => {
                 setTotalPages(pages);
               }}
-              onError={(error) => {
-                console.log("PDF load error:", error);
-              }}
+              onError={handlePdfError}
             />
           )}
         </View>
@@ -193,6 +261,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
   },
   loadingWrapper: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#000",
@@ -202,6 +271,25 @@ const styles = StyleSheet.create({
     fontFamily: "RM",
     fontSize: 14,
     color: "#888",
+  },
+  errorText: {
+    fontFamily: "RM",
+    fontSize: 14,
+    color: "#ddd",
+    textAlign: "center",
+    paddingHorizontal: 30,
+  },
+  retryBtn: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderRadius: 20,
+    backgroundColor: "#E5040A",
+  },
+  retryBtnText: {
+    fontFamily: "RB",
+    fontSize: 14,
+    color: "#fff",
   },
   bottomControls: {
     flexDirection: "row",

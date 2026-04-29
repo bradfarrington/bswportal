@@ -40,9 +40,12 @@ export default function App() {
     InterExtraBold: Inter_800ExtraBold,
   });
 
-  // Prefetch critical data during splash screen (parallel with fonts)
-  const [dataReady, setDataReady] = useState(false);
-  const [videoFinished, setVideoFinished] = useState(false);
+  // Wait for the brand video to finish before revealing the app. A safety
+  // timeout still releases the user if the video errors or stalls. Screens
+  // load their own data on mount (with disk caches), so we don't gate
+  // readiness on network fetches.
+  const SPLASH_FALLBACK_MS = 8000;
+  const [videoComplete, setVideoComplete] = useState(false);
 
   // Create the video player for the splash screen video
   const player = useVideoPlayer(
@@ -53,29 +56,28 @@ export default function App() {
     }
   );
 
-  // Listen for the video to finish playing
   useEventListener(player, "playToEnd", () => {
-    setVideoFinished(true);
+    setVideoComplete(true);
   });
 
-  // Listen for status changes to handle errors
   useEventListener(player, "statusChange", ({ status, error }) => {
     if (status === "error") {
       console.log("Video error:", error);
-      // Fallback in case of video error
-      setVideoFinished(true);
       SplashScreen.hideAsync();
+      setVideoComplete(true);
     }
   });
 
   useEffect(() => {
-    Promise.all([
-      loadCategories().catch(err => console.log('[Prefetch] Categories failed:', err)),
-      loadAllDesignerData().catch(err => console.log('[Prefetch] Designer data failed:', err)),
-    ]).then(() => {
-      console.log('[Prefetch] All data ready');
-      setDataReady(true);
-    }).catch(() => setDataReady(true)); // Never block app on failure
+    const timer = setTimeout(() => setVideoComplete(true), SPLASH_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Kick off data prefetches in the background. We don't await these — screens
+  // call the same loaders on mount and hit the in-memory / disk caches.
+  useEffect(() => {
+    loadCategories().catch(err => console.log('[Prefetch] Categories failed:', err));
+    loadAllDesignerData().catch(err => console.log('[Prefetch] Designer data failed:', err));
   }, []);
 
   const notificationListener = useRef();
@@ -111,7 +113,7 @@ export default function App() {
     await SplashScreen.hideAsync();
   }, []);
 
-  const appReady = fontsLoaded && dataReady && videoFinished;
+  const appReady = fontsLoaded && videoComplete;
 
   if (!appReady) {
     return (

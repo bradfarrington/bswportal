@@ -31,6 +31,7 @@ import { Feather } from '@expo/vector-icons';
 import { decode } from "base64-arraybuffer";
 import { supabase } from '../config/supabaseClient';
 import { createPerspectiveMatrix } from '../utils/PerspectiveMath';
+import CachedImage from '../components/CachedImage';
 
 
 const DraggableDoor = ({ doorSvgHtml, onRemove, isActive, onActivate }) => {
@@ -247,10 +248,10 @@ const DraggableWindow = ({ windowKey, selectedColor, onRemove, isActive, onActiv
         }}
       >
         {imageSource && (
-          <Image 
-            source={imageSource} 
-            style={[styles.windowImageStretched, tintColor && { tintColor }]} 
-            resizeMode="stretch" 
+          <CachedImage
+            source={imageSource}
+            style={[styles.windowImageStretched, tintColor && { tintColor }]}
+            resizeMode="stretch"
           />
         )}
       </View>
@@ -771,10 +772,10 @@ export default function WindowDesignScreen({ navigation, route }) {
               >
                 <View style={styles.windowThumbnailWrapper}>
                   {windowAssets[key]?.["White"] && (
-                    <Image 
-                      source={{ uri: windowAssets[key]["White"] }} 
-                      style={styles.windowThumbnailImg} 
-                      resizeMode="contain" 
+                    <CachedImage
+                      source={{ uri: windowAssets[key]["White"] }}
+                      style={styles.windowThumbnailImg}
+                      resizeMode="contain"
                     />
                   )}
                   <View style={styles.addOverlay}><Ionicons name="add-circle" size={24} color="#E5040A" /></View>
